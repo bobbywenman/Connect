@@ -1,34 +1,30 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Button } from '@/components';
+import { spacing } from '@/constants';
+import { mapAuthError } from '@/features/auth/errors';
+import { FormError } from '@/features/auth/FormError';
+import { useSignOut } from '@/features/auth/hooks';
 import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
-import { supabase } from '@/lib/supabase';
 
 export default function SettingsScreen() {
+  const signOut = useSignOut();
   return (
     <ScreenPlaceholder title="Settings">
-      {/* TEMPORARY: dev shortcut, removed when real sign-out lands in KT-07. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Sign out (dev)"
-        style={styles.button}
-        onPress={() => void supabase.auth.signOut()}
-      >
-        <Text style={styles.buttonText}>Sign out (dev)</Text>
-      </Pressable>
+      <View style={styles.actions}>
+        {/* Signing out clears the session; the route gate then returns to welcome. */}
+        <Button
+          label="Sign out"
+          variant="danger"
+          isLoading={signOut.isPending}
+          onPress={() => signOut.mutate()}
+        />
+        <FormError message={signOut.error ? mapAuthError(signOut.error) : null} />
+      </View>
     </ScreenPlaceholder>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    minHeight: 44,
-    minWidth: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#1E3A5F',
-    paddingHorizontal: 16,
-  },
-  buttonText: { fontSize: 16, color: '#1E3A5F' },
+  actions: { alignSelf: 'stretch', gap: spacing.sm },
 });

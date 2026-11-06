@@ -17,8 +17,8 @@ describe('navigation shell', () => {
 
   it('shows the welcome screen when signed out', async () => {
     const r = await renderAt('/');
-    await waitFor(() => expect(screen.getByLabelText('Continue (dev sign-in)')).toBeTruthy());
-    expect(screen.getByLabelText('Continue (dev sign-in)')).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText('Use demo account (dev)')).toBeTruthy());
+    expect(screen.getByLabelText('Use demo account (dev)')).toBeTruthy();
     expect(r.getPathname()).toBe('/');
   });
 
@@ -29,9 +29,9 @@ describe('navigation shell', () => {
 
   it('dev sign-in lands on the Networks tab and sign out returns to welcome', async () => {
     const r = await renderAt('/');
-    await waitFor(() => expect(screen.getByLabelText('Continue (dev sign-in)')).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText('Use demo account (dev)')).toBeTruthy());
     await act(async () => {
-      fireEvent.press(screen.getByLabelText('Continue (dev sign-in)'));
+      fireEvent.press(screen.getByLabelText('Use demo account (dev)'));
     });
     await waitFor(() => expect(r.getPathname()).toBe('/networks'));
     for (const t of ['Networks', 'Search', 'Study', 'Events', 'Settings']) {
@@ -42,7 +42,7 @@ describe('navigation shell', () => {
     });
     await waitFor(() => expect(r.getPathname()).toBe('/settings'));
     await act(async () => {
-      fireEvent.press(screen.getByLabelText('Sign out (dev)'));
+      fireEvent.press(screen.getByLabelText('Sign out'));
     });
     await waitFor(() => expect(r.getPathname()).toBe('/'));
   });

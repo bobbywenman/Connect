@@ -13,6 +13,8 @@ export interface TextFieldProps extends Pick<
   | 'keyboardType'
   | 'autoCapitalize'
   | 'autoComplete'
+  | 'autoCorrect'
+  | 'textContentType'
   | 'returnKeyType'
   | 'onBlur'
   | 'onSubmitEditing'
