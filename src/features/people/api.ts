@@ -10,6 +10,7 @@ import type { RelationshipRow } from '@/features/relationships';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
+import { orderedPair, type Dismissal, type DuplicatePerson } from './duplicates';
 import type { NetworkPerson } from './listing';
 import type { PersonFormValues } from './schemas';
 
@@ -192,4 +193,42 @@ export async function listNetworkPeople(networkId: string): Promise<NetworkPeopl
       (r) => ids.has(r.source_person_id) && ids.has(r.target_person_id),
     ) as RelationshipRow[],
   };
+}
+
+/**
+ * Every non-archived person with their network ids, for duplicate detection (KT-33).
+ * One query; RLS limits it to the caller's people.
+ */
+export async function listPeopleForDuplicateCheck(): Promise<DuplicatePerson[]> {
+  const { data, error } = await supabase
+    .from('persons')
+    .select('id, first_name, last_name, preferred_name, is_self, network_members(network_id)')
+    .is('archived_at', null);
+  if (error) throw error;
+  return data.map(({ network_members, ...person }) => ({
+    ...person,
+    networkIds: network_members.map((m) => m.network_id),
+  }));
+}
+
+export async function listDismissals(): Promise<Dismissal[]> {
+  const { data, error } = await supabase
+    .from('duplicate_dismissals')
+    .select('person_a_id, person_b_id');
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Record "these two are not the same person". The table stores each pair once with
+ * `person_a_id < person_b_id`, so (a, b) and (b, a) are the same decision; dismissing
+ * a pair twice is not an error.
+ */
+export async function dismissDuplicate(aId: string, bId: string): Promise<void> {
+  const [person_a_id, person_b_id] = orderedPair(aId, bId);
+  const { error } = await supabase
+    .from('duplicate_dismissals')
+    .insert({ person_a_id, person_b_id });
+  // 23505 = unique violation: already dismissed.
+  if (error && error.code !== '23505') throw error;
 }

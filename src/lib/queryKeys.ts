@@ -9,6 +9,8 @@
  *   ['persons', { networkId }]         people list, filtered
  *   ['person', id]                     one person
  *   ['person', 'self']                 the signed-in user's self person ("You")
+ *   ['persons', 'duplicateCheck']      everyone, for duplicate detection (refreshed with any ['persons'] invalidation)
+ *   ['duplicates', 'dismissals']       "not duplicates" decisions
  *   ['customRelationshipTypes']        the user's custom relationship labels
  *
  * Always build keys with this module so they stay consistent.
@@ -22,6 +24,10 @@ export const queryKeys = {
   },
   persons: {
     list: (filter: { networkId?: string } = {}) => ['persons', filter] as const,
+  },
+  duplicates: {
+    people: ['persons', 'duplicateCheck'] as const,
+    dismissals: ['duplicates', 'dismissals'] as const,
   },
   person: {
     detail: (id: string) => ['person', id] as const,

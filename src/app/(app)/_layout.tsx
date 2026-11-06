@@ -17,6 +17,8 @@ export default function AppLayout() {
       <Stack.Screen name="study/session" options={{ title: 'Study session' }} />
       <Stack.Screen name="study/complete" options={{ title: 'Study complete' }} />
       <Stack.Screen name="event/[id]" options={{ title: 'Event' }} />
+      <Stack.Screen name="settings/duplicates" options={{ title: 'Possible duplicates' }} />
+      <Stack.Screen name="merge" options={{ title: 'Merge people' }} />
       <Stack.Screen name="onboarding" options={{ title: 'Welcome', headerShown: false }} />
     </Stack>
   );

@@ -10,7 +10,12 @@ type Filter = { column: string; values: unknown[] };
 const OWNER = '00000000-0000-0000-0000-000000000001';
 
 export function createFakePeople() {
-  const tables: Record<string, Row[]> = { persons: [], network_members: [], relationships: [] };
+  const tables: Record<string, Row[]> = {
+    persons: [],
+    network_members: [],
+    relationships: [],
+    duplicate_dismissals: [],
+  };
   const failures: { table: string; op: Op; error: Error }[] = [];
   let nextId = 1;
   const calls: { table: string; op: Op }[] = [];
@@ -35,6 +40,20 @@ export function createFakePeople() {
         return f.values.includes(value);
       });
 
+    if (op === 'insert' && table === 'duplicate_dismissals') {
+      // The table's check (a < b) and primary key (owner, a, b).
+      const row: Row = { owner_id: OWNER, ...(values as Row) };
+      if (!((row.person_a_id as string) < (row.person_b_id as string))) {
+        return { data: null, error: { code: '23514', message: 'check violation' } };
+      }
+      if (
+        rows.some((r) => r.person_a_id === row.person_a_id && r.person_b_id === row.person_b_id)
+      ) {
+        return { data: null, error: { code: '23505', message: 'duplicate key' } };
+      }
+      rows.push(row);
+      return { data: [row], error: null };
+    }
     if (op === 'insert') {
       const inserted = (Array.isArray(values) ? values : [values]).map((v) => {
         const row: Row = { id: `${table}-${nextId++}`, owner_id: OWNER, ...(v as Row) };
