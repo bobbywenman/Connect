@@ -25,4 +25,7 @@ export const queryKeys = {
   person: {
     detail: (id: string) => ['person', id] as const,
   },
+  /** Signed photo URLs: `['photoUrls', paths]`, plus an optional version suffix. */
+  photoUrlsAll: ['photoUrls'] as const,
+  photoUrls: (paths: string[]) => ['photoUrls', paths] as const,
 };

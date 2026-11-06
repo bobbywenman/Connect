@@ -190,6 +190,6 @@ describe('PersonForm', () => {
   it('shows initials in the photo slot and a disabled photo note', async () => {
     await setup({ values: { firstName: 'Jamie', lastName: 'Lee' } });
     expect(screen.getByText('JL')).toBeOnTheScreen();
-    expect(screen.getByText('Add photo (coming soon)')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Change photo')).toBeOnTheScreen();
   });
 });

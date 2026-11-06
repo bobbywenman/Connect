@@ -1,4 +1,6 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontWeights, networkColors } from '@/constants';
 
@@ -10,6 +12,11 @@ export interface AvatarProps {
   firstName: string;
   lastName?: string;
   photoUrl?: string | null;
+  /**
+   * Stable disk-cache key for the photo. Signed URLs change every time they are issued, so
+   * pass something like `${photo_path}?v=${updated_at}` to avoid re-downloading the same image.
+   */
+  photoCacheKey?: string;
   size?: AvatarSize;
 }
 
@@ -26,16 +33,21 @@ export function avatarColor(name: string): string {
   return networkColors[hash % networkColors.length]!.value;
 }
 
-export function Avatar({ firstName, lastName, photoUrl, size = 'md' }: AvatarProps) {
+export function Avatar({ firstName, lastName, photoUrl, photoCacheKey, size = 'md' }: AvatarProps) {
+  // The URL that failed to load, so a new URL gets a fresh try; initials show meanwhile.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const dimension = avatarSizes[size];
   const fullName = `${firstName} ${lastName ?? ''}`.trim();
   const box = { width: dimension, height: dimension, borderRadius: dimension / 2 };
-  if (photoUrl) {
+  if (photoUrl && photoUrl !== failedUrl) {
     return (
       <Image
         accessibilityRole="image"
         accessibilityLabel={`Photo of ${fullName}`}
-        source={{ uri: photoUrl }}
+        source={{ uri: photoUrl, cacheKey: photoCacheKey }}
+        contentFit="cover"
+        transition={150}
+        onError={() => setFailedUrl(photoUrl)}
         style={[styles.image, box]}
       />
     );

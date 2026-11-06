@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Screen } from '@/components';
 import { colors, fontSizes, fontWeights, spacing } from '@/constants';
@@ -6,6 +6,8 @@ import { useNetworks } from '@/features/networks/hooks';
 
 import { defaultNetworkIds, newPersonFormInput, personToFormInput } from '../formValues';
 import { useCreatePerson, usePerson, useUpdatePerson } from '../hooks';
+import { useApplyPhotoChange, usePhotoUrl } from '../photoHooks';
+import type { PhotoChange } from '../photos';
 import type { PersonFormValues } from '../schemas';
 import { PersonForm } from './PersonForm';
 
@@ -13,6 +15,14 @@ type Props = {
   onSaved: (personId: string) => void;
   onCancel: () => void;
 } & ({ mode: 'create'; networkId?: string } | { mode: 'edit'; personId: string });
+
+/** The person is already saved at this point, so a photo failure is a notice, not a blocker. */
+function warnPhotoFailed() {
+  const title = "Saved, but the photo didn't upload";
+  const body = 'Open the person and try adding the photo again.';
+  if (Platform.OS === 'web') window.alert(`${title}\n${body}`);
+  else Alert.alert(title, body);
+}
 
 function Message({ title, body, onRetry }: { title: string; body?: string; onRetry?: () => void }) {
   return (
@@ -36,6 +46,7 @@ export function PersonFormScreen(props: Props) {
 function CreateScreen({ networkId, onSaved, onCancel }: Extract<Props, { mode: 'create' }>) {
   const networks = useNetworks();
   const create = useCreatePerson();
+  const applyPhoto = useApplyPhotoChange();
 
   if (networks.isPending) return <Message title="Loading…" />;
   if (networks.isError) {
@@ -48,10 +59,13 @@ function CreateScreen({ networkId, onSaved, onCancel }: Extract<Props, { mode: '
     );
   }
 
-  const submit = async (values: PersonFormValues) => {
+  const submit = async (values: PersonFormValues, photo: PhotoChange) => {
     const { networkIds, ...fields } = values;
     try {
       const person = await create.mutateAsync({ fields, networkIds });
+      if (photo.kind !== 'unchanged') {
+        await applyPhoto.mutateAsync({ person, change: photo }).catch(warnPhotoFailed);
+      }
       onSaved(person.id);
     } catch {
       // Surfaced through create.error below; the form keeps the user's input.
@@ -63,7 +77,7 @@ function CreateScreen({ networkId, onSaved, onCancel }: Extract<Props, { mode: '
       title="New person"
       initialValues={newPersonFormInput(defaultNetworkIds(networks.data, networkId))}
       networks={networks.data}
-      isSaving={create.isPending}
+      isSaving={create.isPending || applyPhoto.isPending}
       submitError={create.isError ? "Couldn't save. Check your connection and try again." : null}
       onSubmit={submit}
       onCancel={onCancel}
@@ -75,6 +89,10 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
   const networks = useNetworks();
   const person = usePerson(personId);
   const update = useUpdatePerson(personId);
+  const applyPhoto = useApplyPhotoChange();
+  const photoPath = person.data?.photo_path;
+  const photoVersion = person.data?.updated_at;
+  const photoUrl = usePhotoUrl(photoPath, photoVersion);
 
   if (networks.isPending || person.isPending) return <Message title="Loading…" />;
   if (networks.isError || person.isError) {
@@ -92,10 +110,21 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
   if (!person.data) return <Message title="Person not found" />;
 
   const isSelf = person.data.is_self;
-  const submit = async (values: PersonFormValues) => {
+  const submit = async (values: PersonFormValues, photo: PhotoChange) => {
     const { networkIds, ...fields } = values;
     try {
-      await update.mutateAsync({ fields, networkIds: isSelf ? undefined : networkIds });
+      const saved = await update.mutateAsync({
+        fields,
+        networkIds: isSelf ? undefined : networkIds,
+      });
+      if (photo.kind !== 'unchanged') {
+        await applyPhoto
+          .mutateAsync({
+            person: { ...saved, photo_path: person.data?.photo_path ?? null },
+            change: photo,
+          })
+          .catch(warnPhotoFailed);
+      }
       onSaved(personId);
     } catch {
       // Surfaced through update.error below; the form keeps the user's input.
@@ -108,7 +137,10 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
       initialValues={personToFormInput(person.data)}
       networks={networks.data}
       isSelf={isSelf}
-      isSaving={update.isPending}
+      isSaving={update.isPending || applyPhoto.isPending}
+      photoUrl={photoUrl}
+      photoCacheKey={photoPath ? `${photoPath}?v=${photoVersion}` : undefined}
+      hasPhoto={!!photoPath}
       submitError={update.isError ? "Couldn't save. Check your connection and try again." : null}
       onSubmit={submit}
       onCancel={onCancel}

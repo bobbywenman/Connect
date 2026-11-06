@@ -81,3 +81,9 @@ The PRD lists both "tags" and "groups" on a person with no difference in behavio
 **Decided:** 2026-11-06 by engineering
 
 The tickets stored local notification IDs on the person record. Those IDs only mean something on the device that scheduled them, so they are kept in device storage. The app re-syncs all reminders on launch. The database only stores whether a reminder is on.
+
+## D-11 · Photos upload on Save, not on pick
+
+**Decided:** 2026-11-06 by engineering (KT-15)
+
+A picked photo is cropped square, resized to at most 500x500 and encoded as JPEG (0.8) on the device, then held locally until the person form is saved. After the person row exists, the photo is uploaded to `avatars/{owner_id}/{person_id}.jpg` (upsert) and `photo_path` is set. This avoids orphaned uploads on cancel and works the same for new and existing people. If only the photo step fails, the person is still saved and the user is told to retry. Signed URLs last 1 hour and are cached for 50 minutes; the disk-cache key is `{photo_path}?v={updated_at}` so a replaced photo (same path) refreshes.
