@@ -1,7 +1,10 @@
 import {
   DEFAULT_REMINDER_SETTINGS,
+  HOUR_CHOICES,
+  LEAD_DAY_CHOICES,
   MAX_SCHEDULED,
   describeLead,
+  mergeReminderSettings,
   parseReminderSettings,
   planReminders,
   reminderBody,
@@ -218,7 +221,13 @@ describe('parseReminderSettings', () => {
       parseReminderSettings({
         reminders: { birthdays: false, anniversaries: true, leadDays: 3, hour: 18 },
       }),
-    ).toEqual({ birthdays: false, anniversaries: true, leadDays: 3, hour: 18 });
+    ).toEqual({
+      birthdays: false,
+      anniversaries: true,
+      leadDays: 3,
+      hour: 18,
+      monthlySummary: false,
+    });
     const clamped = parseReminderSettings({ reminders: { leadDays: 400, hour: 99 } });
     expect(clamped.leadDays).toBe(30);
     expect(clamped.hour).toBe(23);
@@ -226,5 +235,68 @@ describe('parseReminderSettings', () => {
       leadDays: 0,
       hour: 0,
     });
+  });
+});
+
+describe('parseReminderSettings: monthlySummary', () => {
+  it('defaults to off and reads a stored boolean', () => {
+    expect(parseReminderSettings({})).toMatchObject({ monthlySummary: false });
+    expect(parseReminderSettings({ reminders: { monthlySummary: true } })).toMatchObject({
+      monthlySummary: true,
+    });
+    expect(parseReminderSettings({ reminders: { monthlySummary: 'yes' } })).toMatchObject({
+      monthlySummary: false,
+    });
+  });
+});
+
+describe('mergeReminderSettings', () => {
+  it('changes only the given reminder fields and keeps other settings keys', () => {
+    const merged = mergeReminderSettings(
+      { theme: 'dark', reminders: { birthdays: true, legacy: 1 }, nested: { a: 1 } },
+      { leadDays: 3 },
+    );
+    expect(merged).toEqual({
+      theme: 'dark',
+      nested: { a: 1 },
+      reminders: { birthdays: true, legacy: 1, leadDays: 3 },
+    });
+  });
+
+  it('starts from empty when settings are missing or not an object', () => {
+    expect(mergeReminderSettings(null, { hour: 8 })).toEqual({ reminders: { hour: 8 } });
+    expect(mergeReminderSettings([1, 2], { hour: 8 })).toEqual({ reminders: { hour: 8 } });
+    expect(mergeReminderSettings({ reminders: 'bad' }, { hour: 8 })).toEqual({
+      reminders: { hour: 8 },
+    });
+  });
+});
+
+describe('settings choices', () => {
+  it('offer the default values', () => {
+    expect(LEAD_DAY_CHOICES.map((c) => c.value)).toContain(DEFAULT_REMINDER_SETTINGS.leadDays);
+    expect(HOUR_CHOICES.map((c) => c.value)).toContain(DEFAULT_REMINDER_SETTINGS.hour);
+  });
+});
+
+describe('disabling a reminder type', () => {
+  it('drops that type from the next plan and keeps the other', () => {
+    const people = [
+      person({
+        id: 'p1',
+        birthdate: '1990-11-20',
+        birthday_reminder: true,
+        anniversary_date: '2015-11-22',
+        anniversary_reminder: true,
+      }),
+    ];
+    const now = at(2026, 11, 6);
+    const before = planReminders(people, parseReminderSettings({}), now);
+    expect(before.map((r) => r.kind).sort()).toEqual(['anniversary', 'birthday']);
+
+    // What the app stores after the user turns Birthday reminders off.
+    const stored = mergeReminderSettings({}, { birthdays: false });
+    const after = planReminders(people, parseReminderSettings(stored), now);
+    expect(after.map((r) => r.kind)).toEqual(['anniversary']);
   });
 });

@@ -14,12 +14,14 @@
  *   ['persons', 'duplicateCheck']      everyone, for duplicate detection (refreshed with any ['persons'] invalidation)
  *   ['duplicates', 'dismissals']       "not duplicates" decisions
  *   ['customRelationshipTypes']        the user's custom relationship labels
+ *   ['reminderPermission']             the system notification permission (KT-37)
  *
  * Always build keys with this module so they stay consistent.
  */
 export const queryKeys = {
   profile: ['profile'] as const,
   customRelationshipTypes: ['customRelationshipTypes'] as const,
+  reminderPermission: ['reminderPermission'] as const,
   networks: {
     all: ['networks'] as const,
     detail: (id: string) => ['networks', id] as const,

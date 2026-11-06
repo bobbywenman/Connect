@@ -7,5 +7,6 @@ export * from './Card';
 export * from './Chip';
 export * from './ConfirmDialog';
 export * from './EmptyState';
+export * from './RadioGroup';
 export * from './Screen';
 export * from './TextField';

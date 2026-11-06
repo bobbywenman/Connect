@@ -28,16 +28,37 @@ export interface ReminderSettings {
   leadDays: number;
   /** Local hour of day, 0-23. */
   hour: number;
+  /** Monthly "new people" summary (KT-28 schedules it; stored here only). */
+  monthlySummary: boolean;
 }
+
+export type ReminderSettingsPatch = Partial<ReminderSettings>;
 
 export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   birthdays: true,
   anniversaries: true,
   leadDays: 0,
   hour: 9,
+  monthlySummary: false,
 };
 
 export const MAX_LEAD_DAYS = 30;
+
+/** Choices offered for "Remind me" (settings screen). Values are `leadDays`. */
+export const LEAD_DAY_CHOICES: readonly { value: number; label: string }[] = [
+  { value: 0, label: 'Same day' },
+  { value: 1, label: '1 day before' },
+  { value: 3, label: '3 days before' },
+  { value: 7, label: '1 week before' },
+];
+
+/** Choices offered for the time of day reminders fire. Values are `hour`. */
+export const HOUR_CHOICES: readonly { value: number; label: string }[] = [
+  { value: 8, label: '8am' },
+  { value: 9, label: '9am' },
+  { value: 12, label: '12pm' },
+  { value: 18, label: '6pm' },
+];
 
 /** iOS keeps at most 64 pending local notifications; stay under it with headroom. */
 export const MAX_SCHEDULED = 60;
@@ -68,7 +89,23 @@ export function parseReminderSettings(settings: unknown): ReminderSettings {
     anniversaries: typeof r.anniversaries === 'boolean' ? r.anniversaries : d.anniversaries,
     leadDays: clampInt(r.leadDays, 0, MAX_LEAD_DAYS, d.leadDays),
     hour: clampInt(r.hour, 0, 23, d.hour),
+    monthlySummary: typeof r.monthlySummary === 'boolean' ? r.monthlySummary : d.monthlySummary,
   };
+}
+
+/**
+ * Merges a reminder patch into a `profiles.settings` value. Only `reminders` is touched; every
+ * other key (and any unknown key inside `reminders`) is kept. Used by the write and the cache update.
+ */
+export function mergeReminderSettings(
+  settings: unknown,
+  patch: ReminderSettingsPatch,
+): Record<string, unknown> {
+  const isObject = (v: unknown): v is Record<string, unknown> =>
+    typeof v === 'object' && v !== null && !Array.isArray(v);
+  const base = isObject(settings) ? settings : {};
+  const current = isObject(base.reminders) ? base.reminders : {};
+  return { ...base, reminders: { ...current, ...patch } };
 }
 
 function isLeapYear(year: number): boolean {
