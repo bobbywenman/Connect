@@ -7,3 +7,4 @@ android
 docs/requirements
 package-lock.json
 src/types/database.ts
+.claude
