@@ -1,5 +1,3 @@
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { NewNetworkScreen } from '@/features/networks/components/NewNetworkScreen';
 
-export default function NewNetworkScreen() {
-  return <ScreenPlaceholder title="Create network: coming in KT-13" />;
-}
+export default NewNetworkScreen;
