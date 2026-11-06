@@ -27,6 +27,16 @@ Requirements: Node 22 (see `.nvmrc`), npm, and for iOS a Mac with Xcode.
 npm install
 ```
 
+Create your `.env` (gitignored) from the template. For the local backend (needs Docker), start it and copy the URL and publishable key it prints (also shown by `npx supabase status`) into `.env`; for the hosted project, use the key from the dashboard. See [Supabase setup](docs/setup/supabase.md).
+
+```bash
+cp .env.example .env
+```
+
+```bash
+npm run db:start
+```
+
 Run on the iOS simulator (builds a development app the first time):
 
 ```bash

@@ -1,51 +1,70 @@
-import { useSyncExternalStore } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { create } from 'zustand';
+
+import { getMyProfile } from '@/features/profile/api';
+import { supabase } from '@/lib/supabase';
+
+/** Mirrors Supabase auth. `loading` lasts until the stored session (and profile) have been read. */
+export interface SessionState {
+  status: 'loading' | 'signedOut' | 'signedIn';
+  session: Session | null;
+  userId: string | null;
+  /** From `profiles.onboarding_complete`; read after sign-in. */
+  onboardingComplete: boolean;
+  setOnboardingComplete: (value: boolean) => void;
+}
+
+const initialState = {
+  status: 'loading',
+  session: null,
+  userId: null,
+  onboardingComplete: false,
+} as const satisfies Partial<SessionState>;
+
+export const useSession = create<SessionState>()((set) => ({
+  ...initialState,
+  setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
+}));
+
+/** Test helper: put the store back to its initial (loading) state. */
+export function resetSession() {
+  useSession.setState({ ...initialState });
+}
 
 /**
- * TEMPORARY auth-state stub. KT-06 replaces this with the real Supabase-backed
- * session; the shape (`status`, `onboardingComplete`) is what the gate reads.
+ * Subscribes the store to Supabase auth changes. Call once from the root layout;
+ * returns the unsubscribe function. Supabase emits INITIAL_SESSION on subscribe,
+ * which is what moves `loading` to `signedOut` / `signedIn`.
  */
-export interface SessionState {
-  status: 'signedOut' | 'signedIn';
-  onboardingComplete: boolean;
-}
+export function initSession(): () => void {
+  const { set, get } = { set: useSession.setState, get: useSession.getState };
+  let profileUserId: string | null = null;
 
-const initialState: SessionState = { status: 'signedOut', onboardingComplete: true };
+  async function loadProfile(userId: string) {
+    let onboardingComplete = false;
+    try {
+      const profile = await getMyProfile(userId);
+      onboardingComplete = profile?.onboarding_complete ?? false;
+    } catch {
+      // Profile unreadable (e.g. offline): fall back to onboarding rather than blocking sign-in.
+    }
+    if (get().userId !== userId) return; // signed out or switched user meanwhile
+    set({ status: 'signedIn', onboardingComplete });
+  }
 
-let state: SessionState = initialState;
-const listeners = new Set<() => void>();
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session) {
+      profileUserId = null;
+      set({ status: 'signedOut', session: null, userId: null, onboardingComplete: false });
+      return;
+    }
+    set({ session, userId: session.user.id });
+    if (profileUserId !== session.user.id) {
+      profileUserId = session.user.id;
+      // Never await Supabase calls inside this callback (it can deadlock auth): defer.
+      setTimeout(() => void loadProfile(session.user.id), 0);
+    }
+  });
 
-function setState(next: SessionState) {
-  state = next;
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-export const sessionActions = {
-  signIn(options: { onboardingComplete?: boolean } = {}) {
-    setState({ status: 'signedIn', onboardingComplete: options.onboardingComplete ?? false });
-  },
-  completeOnboarding() {
-    setState({ ...state, onboardingComplete: true });
-  },
-  signOut() {
-    setState(initialState);
-  },
-  /** Test helper: put the store back to its initial (signed out) state. */
-  reset() {
-    setState(initialState);
-  },
-};
-
-export function getSession(): SessionState {
-  return state;
-}
-
-export function useSession(): SessionState {
-  return useSyncExternalStore(subscribe, getSession, getSession);
+  return () => data.subscription.unsubscribe();
 }
