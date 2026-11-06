@@ -2,13 +2,22 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 
 import { queryKeys } from '@/lib/queryKeys';
 
-import { createPerson, getPerson, updatePerson, type PersonFields } from './api';
+import { createPerson, getPerson, listNetworkPeople, updatePerson, type PersonFields } from './api';
 
 export function usePerson(id: string | undefined) {
   return useQuery({
     queryKey: queryKeys.person.detail(id ?? ''),
     queryFn: () => getPerson(id as string),
     enabled: !!id,
+  });
+}
+
+/** People in a network (plus Me) and the relationships among them. */
+export function useNetworkPeople(networkId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.persons.list({ networkId }),
+    queryFn: () => listNetworkPeople(networkId as string),
+    enabled: !!networkId,
   });
 }
 

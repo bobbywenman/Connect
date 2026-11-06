@@ -6,9 +6,11 @@
 // and `updatePerson` is idempotent so a retry after a partial failure converges.
 // That keeps this ticket free of a migration; move to an RPC if we ever need
 // true atomicity (e.g. bulk import).
+import type { RelationshipRow } from '@/features/relationships';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
+import type { NetworkPerson } from './listing';
 import type { PersonFormValues } from './schemas';
 
 export type Person = Database['public']['Tables']['persons']['Row'];
@@ -127,4 +129,55 @@ export async function updatePerson(
     if (removeError) throw removeError;
   }
   return person;
+}
+
+const LIST_COLUMNS =
+  'id, first_name, last_name, preferred_name, photo_path, tags, job_title, is_self';
+
+export interface NetworkPeople {
+  /** Self person first, then members; otherwise unsorted (see `sortPeople`). Archived people excluded. */
+  people: NetworkPerson[];
+  /** Relationships whose two ends are both in `people`. */
+  relationships: RelationshipRow[];
+  /** The self person's id, when there is one. */
+  selfId: string | undefined;
+}
+
+/**
+ * Everything the people list needs, in three parallel queries (no N+1): the network's
+ * non-archived members, the self person (who belongs to every network without a
+ * membership row, D-2), and the user's relationships (RLS limits all three to the
+ * caller), which are then narrowed to pairs inside the list so each row can name its label.
+ */
+export async function listNetworkPeople(networkId: string): Promise<NetworkPeople> {
+  const [members, self, relationships] = await Promise.all([
+    supabase
+      .from('persons')
+      .select(`${LIST_COLUMNS}, network_members!inner(network_id)`)
+      .eq('network_members.network_id', networkId)
+      .is('archived_at', null),
+    supabase.from('persons').select(LIST_COLUMNS).eq('is_self', true).is('archived_at', null),
+    supabase
+      .from('relationships')
+      .select(
+        'source_person_id, target_person_id, type, inverse_type, custom_label, inverse_custom_label',
+      ),
+  ]);
+  if (members.error) throw members.error;
+  if (self.error) throw self.error;
+  if (relationships.error) throw relationships.error;
+
+  const selfPerson = self.data[0];
+  const people: NetworkPerson[] = [
+    ...(selfPerson ? [selfPerson] : []),
+    ...members.data.map(({ network_members: _memberships, ...person }) => person),
+  ];
+  const ids = new Set(people.map((p) => p.id));
+  return {
+    people,
+    selfId: selfPerson?.id,
+    relationships: relationships.data.filter(
+      (r) => ids.has(r.source_person_id) && ids.has(r.target_person_id),
+    ) as RelationshipRow[],
+  };
 }
