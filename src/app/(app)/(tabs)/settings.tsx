@@ -7,6 +7,7 @@ import { FormError } from '@/features/auth/FormError';
 import { useSignOut } from '@/features/auth/hooks';
 import { DuplicatesRow } from '@/features/people/components/DuplicatesRow';
 import { DevReminderTest } from '@/features/notifications/components/DevReminderTest';
+import { NotificationsRow } from '@/features/notifications/components/NotificationsRow';
 import { MyProfileRow } from '@/features/profile/components/MyProfileRow';
 
 export default function SettingsScreen() {
@@ -18,6 +19,9 @@ export default function SettingsScreen() {
       </View>
       <View style={styles.section}>
         <DuplicatesRow />
+      </View>
+      <View style={styles.section}>
+        <NotificationsRow />
       </View>
       {__DEV__ ? (
         <View style={styles.section}>

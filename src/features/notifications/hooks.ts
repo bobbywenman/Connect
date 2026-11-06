@@ -1,12 +1,23 @@
 // Root-level wiring for reminders (KT-36): foreground handler, sync triggers, tap routing.
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
+import type { Profile } from '@/features/profile/api';
+import { useMyProfile } from '@/features/profile/hooks';
+import { queryKeys } from '@/lib/queryKeys';
 import { useSession } from '@/store/session';
 
-import { ensureReminderPermission, supportsNotifications } from './permissions';
+import { updateReminderSettings } from './api';
+import { mergeReminderSettings, parseReminderSettings, type ReminderSettingsPatch } from './plan';
+import {
+  ensureReminderPermission,
+  getReminderPermission,
+  supportsNotifications,
+  type ReminderPermission,
+} from './permissions';
 import { responseKey, routeForResponse } from './routing';
 import { requestReminderCancel, requestReminderSync } from './scheduler';
 
@@ -85,4 +96,71 @@ export function useReminderPermission() {
   }, []);
   const onDisable = useCallback(() => setDenied(false), []);
   return { denied, onEnable, onDisable };
+}
+
+/** The reminder settings in `profiles.settings.reminders`, with defaults for anything unset. */
+export function useReminderSettings() {
+  const profile = useMyProfile();
+  const settings = useMemo(
+    () => (profile.data ? parseReminderSettings(profile.data.settings) : undefined),
+    [profile.data],
+  );
+  return {
+    settings,
+    isPending: profile.isPending,
+    isError: profile.isError,
+    refetch: profile.refetch,
+  };
+}
+
+/**
+ * Saves part of the reminder settings. The cache is updated at once and rolled back on failure.
+ * On success the schedule is re-synced so the change takes effect (D-16).
+ */
+export function useUpdateReminderSettings() {
+  const queryClient = useQueryClient();
+  const userId = useSession((s) => s.userId);
+  return useMutation({
+    // Writes run one at a time, so each read-modify-write sees the previous one's result.
+    scope: { id: 'reminder-settings' },
+    mutationFn: (patch: ReminderSettingsPatch) => updateReminderSettings(userId as string, patch),
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.profile });
+      const previous = queryClient.getQueryData<Profile | null>(queryKeys.profile);
+      if (previous) {
+        queryClient.setQueryData<Profile>(queryKeys.profile, {
+          ...previous,
+          settings: mergeReminderSettings(previous.settings, patch) as Profile['settings'],
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _patch, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(queryKeys.profile, context.previous);
+      }
+    },
+    onSuccess: () => requestReminderSync(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.profile }),
+  });
+}
+
+/**
+ * The system permission state for the settings screen, plus `enable` (asks once, when undetermined).
+ * Re-read on every focus (staleTime 0), so it updates after the user returns from system Settings.
+ */
+export function useReminderPermissionStatus() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: queryKeys.reminderPermission,
+    queryFn: getReminderPermission,
+    staleTime: 0,
+  });
+  const enable = useCallback(async (): Promise<ReminderPermission> => {
+    const result = await ensureReminderPermission();
+    queryClient.setQueryData(queryKeys.reminderPermission, result);
+    if (result === 'granted') requestReminderSync();
+    return result;
+  }, [queryClient]);
+  return { status: query.data, isPending: query.isPending, enable };
 }

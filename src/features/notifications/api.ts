@@ -1,8 +1,17 @@
 // The only place the notifications feature talks to Supabase: the rows reminders are planned from.
 import { getMyProfile } from '@/features/profile/api';
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/types/database';
 
-import { parseReminderSettings, type ReminderPerson, type ReminderSettings } from './plan';
+import {
+  mergeReminderSettings,
+  parseReminderSettings,
+  type ReminderPerson,
+  type ReminderSettings,
+  type ReminderSettingsPatch,
+} from './plan';
+
+type ProfileSettings = Database['public']['Tables']['profiles']['Update']['settings'];
 
 const COLUMNS =
   'id, first_name, preferred_name, birthdate, birthday_reminder, anniversary_date, anniversary_reminder, archived_at, is_self';
@@ -40,4 +49,18 @@ export async function findPersonWithBirthday(
 export async function getReminderSettings(userId: string): Promise<ReminderSettings> {
   const profile = await getMyProfile(userId);
   return parseReminderSettings(profile?.settings);
+}
+
+/**
+ * Writes only the given reminder fields. Reads the current `profiles.settings`, merges the patch
+ * into `reminders` (other keys are kept) and writes the whole object back.
+ */
+export async function updateReminderSettings(
+  userId: string,
+  patch: ReminderSettingsPatch,
+): Promise<void> {
+  const profile = await getMyProfile(userId);
+  const settings = mergeReminderSettings(profile?.settings, patch) as ProfileSettings;
+  const { error } = await supabase.from('profiles').update({ settings }).eq('id', userId);
+  if (error) throw error;
 }
