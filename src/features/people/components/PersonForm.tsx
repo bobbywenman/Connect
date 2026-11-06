@@ -10,15 +10,17 @@ import {
 } from 'react-hook-form';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { Avatar, Button, Screen, TextField } from '@/components';
+import { Button, Screen, TextField } from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, spacing } from '@/constants';
 import type { NetworkSummary } from '@/features/networks/api';
 
 import { confirmDiscard } from '../confirmDiscard';
+import { NO_PHOTO_CHANGE, type PhotoChange } from '../photos';
 import { createPersonFormSchema, type PersonFormInput, type PersonFormValues } from '../schemas';
 import { DateField } from './DateField';
 import { FormSection } from './FormSection';
 import { NetworkPicker } from './NetworkPicker';
+import { PhotoPicker } from './PhotoPicker';
 import { TagInput } from './TagInput';
 
 type SectionKey = 'personal' | 'location' | 'work' | 'notes';
@@ -88,7 +90,12 @@ export interface PersonFormProps {
   isSaving?: boolean;
   /** Message from a failed save, shown above the fields. */
   submitError?: string | null;
-  onSubmit: (values: PersonFormValues) => void | Promise<void>;
+  /** Signed URL and cache key of the saved photo (edit only). */
+  photoUrl?: string | null;
+  photoCacheKey?: string;
+  hasPhoto?: boolean;
+  /** `photo` says what to do with the photo once the person row is saved. */
+  onSubmit: (values: PersonFormValues, photo: PhotoChange) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -105,6 +112,9 @@ export function PersonForm({
   isSelf = false,
   isSaving = false,
   submitError,
+  photoUrl,
+  photoCacheKey,
+  hasPhoto = false,
   onSubmit,
   onCancel,
 }: PersonFormProps) {
@@ -118,6 +128,8 @@ export function PersonForm({
     resolver: zodResolver(schema),
     defaultValues: initialValues,
   });
+
+  const [photo, setPhoto] = useState<PhotoChange>(NO_PHOTO_CHANGE);
 
   const [open, setOpen] = useState<Record<SectionKey, boolean>>(() => {
     const initial = {} as Record<SectionKey, boolean>;
@@ -134,7 +146,7 @@ export function PersonForm({
   const anniversaryDate = useWatch({ control, name: 'anniversaryDate' });
 
   const save = handleSubmit(
-    (values) => onSubmit(values),
+    (values) => onSubmit(values, photo),
     (invalid) => {
       // Reveal any collapsed section that holds an error.
       setOpen((o) => {
@@ -148,7 +160,7 @@ export function PersonForm({
   );
 
   const cancel = async () => {
-    if (!isDirty || (await confirmDiscard())) onCancel();
+    if ((!isDirty && photo.kind === 'unchanged') || (await confirmDiscard())) onCancel();
   };
 
   const reminderRow = (
@@ -197,12 +209,15 @@ export function PersonForm({
         ) : null}
 
         <FormSection title="Basic" expanded collapsible={false} onToggle={() => {}}>
-          <View style={styles.photoRow}>
-            <Avatar firstName={firstName} lastName={lastName} size="lg" />
-            <Text style={styles.photoNote} accessibilityState={{ disabled: true }}>
-              Add photo (coming soon)
-            </Text>
-          </View>
+          <PhotoPicker
+            firstName={firstName}
+            lastName={lastName}
+            savedUrl={photoUrl}
+            savedCacheKey={photoCacheKey}
+            hasSavedPhoto={hasPhoto}
+            change={photo}
+            onChange={setPhoto}
+          />
           <FormText
             control={control}
             name="firstName"
@@ -371,8 +386,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   fields: { gap: spacing.base, paddingBottom: spacing.xl },
   submitError: { color: colors.error, fontSize: fontSizes.sm },
-  photoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.base },
-  photoNote: { flex: 1, fontSize: fontSizes.sm, color: colors.textSecondary },
   switchRow: {
     minHeight: minTapTarget,
     flexDirection: 'row',

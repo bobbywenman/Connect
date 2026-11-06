@@ -93,3 +93,9 @@ The Supabase client uses the PKCE flow, so reset emails land on `<redirectTo>?co
 **Decided:** 2026-11-06 by engineering (KT-16)
 
 `listNetworkPeople` loads the network's people, then all of the user's relationships (RLS-scoped), and keeps only those among the listed people in the app. This avoids long `in (...)` URLs. PostgREST returns at most 1,000 rows per request, so an account with more than ~1,000 relationships needs a SQL view or RPC instead; revisit in the performance pass (KT-42). Counts shown on network cards and the people list exclude "You".
+
+## D-13 · Photos upload on Save, not on pick
+
+**Decided:** 2026-11-06 by engineering (KT-15)
+
+A picked photo is cropped square, resized to at most 500x500 and encoded as JPEG (0.8) on the device, then held locally until the person form is saved. After the person row exists, the photo is uploaded to `avatars/{owner_id}/{person_id}.jpg` (upsert) and `photo_path` is set. This avoids orphaned uploads on cancel and works the same for new and existing people. If only the photo step fails, the person is still saved and the user is told to retry. Signed URLs last 1 hour and are cached for 50 minutes; the disk-cache key is `{photo_path}?v={updated_at}` so a replaced photo (same path) refreshes.

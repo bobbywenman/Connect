@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Avatar, avatarColor, getInitials } from '@/components';
 
@@ -13,6 +13,24 @@ describe('Avatar', () => {
     await render(<Avatar firstName="Ada" lastName="Lovelace" photoUrl="https://x.test/a.jpg" />);
     expect(screen.getByLabelText('Photo of Ada Lovelace')).toBeOnTheScreen();
     expect(screen.queryByText('AL')).toBeNull();
+  });
+
+  it('passes the cache key to the image and falls back to initials if it fails to load', async () => {
+    await render(
+      <Avatar
+        firstName="Ada"
+        lastName="Lovelace"
+        photoUrl="https://x.test/a.jpg"
+        photoCacheKey="u/p.jpg?v=1"
+      />,
+    );
+    const image = screen.getByLabelText('Photo of Ada Lovelace');
+    expect(image.props.source[0]).toMatchObject({
+      uri: 'https://x.test/a.jpg',
+      cacheKey: 'u/p.jpg?v=1',
+    });
+    await fireEvent(image, 'error', { nativeEvent: { error: 'x' } });
+    expect(await screen.findByText('AL')).toBeOnTheScreen();
   });
 
   it.each([
