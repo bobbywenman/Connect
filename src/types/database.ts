@@ -263,7 +263,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "delete_network":
+            "count_people_only_in_network":
+{ Args: { "network_id": string }; Returns: number
+                           },
+"delete_network":
 { Args: { "network_id": string }; Returns: number
                            }
           }

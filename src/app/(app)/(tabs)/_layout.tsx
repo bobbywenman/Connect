@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 
+import { colors } from '@/constants';
+
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TABS: { name: string; title: string; icon: IconName }[] = [
@@ -13,7 +15,7 @@ const TABS: { name: string; title: string; icon: IconName }[] = [
 
 export default function TabsLayout() {
   return (
-    <Tabs>
+    <Tabs screenOptions={{ tabBarActiveTintColor: colors.primary }}>
       {TABS.map((tab) => (
         <Tabs.Screen
           key={tab.name}
