@@ -21,7 +21,8 @@ export const queryKeys = {
     detail: (id: string) => ['networks', id] as const,
   },
   persons: {
-    list: (filter: { networkId?: string; includeArchived?: boolean } = {}) => ['persons', filter] as const,
+    list: (filter: { networkId?: string; includeArchived?: boolean } = {}) =>
+      ['persons', filter] as const,
   },
   person: {
     detail: (id: string) => ['person', id] as const,

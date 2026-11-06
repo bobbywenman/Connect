@@ -13,9 +13,10 @@ import type { Person, PersonConnection } from './api';
 import { normalizeText, sortPeople } from './listing';
 
 /** "Robert Wenman" plus a separate nickname when it differs from the first name. */
-export function nameParts(
-  person: Pick<Person, 'first_name' | 'last_name' | 'preferred_name'>,
-): { name: string; nickname: string | null } {
+export function nameParts(person: Pick<Person, 'first_name' | 'last_name' | 'preferred_name'>): {
+  name: string;
+  nickname: string | null;
+} {
   const name = [person.first_name, person.last_name]
     .map((part) => part?.trim())
     .filter(Boolean)
@@ -80,8 +81,9 @@ export function sortConnections(connections: readonly PersonConnection[]): Perso
 }
 
 /** Cache key that changes when the photo is replaced (the path stays the same). */
-export function photoCacheKey(person: { photo_path: string | null; updated_at?: string }):
-  | string
-  | undefined {
+export function photoCacheKey(person: {
+  photo_path: string | null;
+  updated_at?: string;
+}): string | undefined {
   return person.photo_path ? `${person.photo_path}?v=${person.updated_at ?? ''}` : undefined;
 }

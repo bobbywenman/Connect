@@ -1,9 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ActionSheet, Avatar, Badge, Button, Chip, EmptyState, type SheetAction } from '@/components';
+import {
+  ActionSheet,
+  Avatar,
+  Badge,
+  Button,
+  Chip,
+  ConfirmDialog,
+  EmptyState,
+  type SheetAction,
+} from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, radii, spacing } from '@/constants';
 import { resolveNetworkColor } from '@/features/networks/colors';
 import { displayName } from '@/features/relationships';
@@ -104,6 +113,15 @@ function Loaded({
   const mutating =
     archive.isPending || unarchive.isPending || remove.isPending || removeFromNetwork.isPending;
 
+  /**
+   * Close the open sheet, then open another. iOS cannot present a modal while another is
+   * still dismissing, so wait for the dismissal there.
+   */
+  const switchTo = (next: Sheet) => {
+    setSheet(null);
+    setTimeout(() => setSheet(next), Platform.OS === 'ios' ? 400 : 0);
+  };
+
   /** Run a change, then `then()`; show a message instead when it fails. */
   const run = async (action: () => Promise<unknown>, failure: string, then?: () => void) => {
     setSheet(null);
@@ -118,8 +136,10 @@ function Loaded({
 
   const doArchive = () =>
     run(() => archive.mutateAsync(), `Couldn't archive ${first}. Try again.`, leave);
-  const doRestore = () => run(() => unarchive.mutateAsync(), `Couldn't restore ${first}. Try again.`);
-  const doDelete = () => run(() => remove.mutateAsync(), `Couldn't delete ${first}. Try again.`, leave);
+  const doRestore = () =>
+    run(() => unarchive.mutateAsync(), `Couldn't restore ${first}. Try again.`);
+  const doDelete = () =>
+    run(() => remove.mutateAsync(), `Couldn't delete ${first}. Try again.`, leave);
   const doRemoveFromNetwork = (network: DetailNetwork) =>
     run(
       () => removeFromNetwork.mutateAsync(network.id),
@@ -129,7 +149,7 @@ function Loaded({
 
   const startRemoveFromNetwork = (network: DetailNetwork) => {
     // Their last network: removing leaves them in no list at all, so offer delete first.
-    if (networks.length <= 1) setSheet('lastNetwork');
+    if (networks.length <= 1) switchTo('lastNetwork');
     else void doRemoveFromNetwork(network);
   };
 
@@ -147,7 +167,7 @@ function Loaded({
       });
     }
     if (canDeletePerson(person)) {
-      menuActions.push({ label: 'Delete', destructive: true, onPress: () => setSheet('delete') });
+      menuActions.push({ label: 'Delete', destructive: true, onPress: () => switchTo('delete') });
     }
   }
 
@@ -173,7 +193,9 @@ function Loaded({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Edit person"
-                onPress={() => router.push({ pathname: '/person/[id]/edit', params: { id: person.id } })}
+                onPress={() =>
+                  router.push({ pathname: '/person/[id]/edit', params: { id: person.id } })
+                }
                 style={styles.headerButton}
               >
                 <Text style={styles.headerButtonText}>Edit</Text>
@@ -285,7 +307,9 @@ function Loaded({
                 key={c.relationship.id}
                 connection={c}
                 label={connectionLabel(person, c)}
-                photoUrl={c.person.photo_path ? (connectionPhotos?.[c.person.photo_path] ?? null) : null}
+                photoUrl={
+                  c.person.photo_path ? (connectionPhotos?.[c.person.photo_path] ?? null) : null
+                }
                 onPress={() =>
                   router.push({ pathname: '/person/[id]', params: { id: c.person.id } })
                 }
@@ -315,18 +339,18 @@ function Loaded({
         title={first}
         actions={menuActions}
       />
-      <ActionSheet
+      <ConfirmDialog
         visible={sheet === 'delete'}
-        onClose={() => setSheet(null)}
+        onCancel={() => setSheet(null)}
+        onConfirm={() => void doDelete()}
+        confirmLabel={`Delete ${first}`}
+        destructive
         title={`Delete ${first}?`}
         message={
           relationshipCount > 0
             ? `This permanently deletes ${first} and ${relationshipCount} ${relationshipCount === 1 ? 'relationship' : 'relationships'}. It can't be undone. Archive instead to keep them.`
             : `This permanently deletes ${first}. It can't be undone. Archive instead to keep them.`
         }
-        actions={[
-          { label: `Delete ${first}`, destructive: true, onPress: () => void doDelete() },
-        ]}
       />
       <ActionSheet
         visible={sheet === 'lastNetwork'}
@@ -334,7 +358,7 @@ function Loaded({
         title={`${first} won't be in any network`}
         message="Delete them instead?"
         actions={[
-          { label: `Delete ${first}`, destructive: true, onPress: () => setSheet('delete') },
+          { label: `Delete ${first}`, destructive: true, onPress: () => switchTo('delete') },
           ...(contextNetwork
             ? [
                 {
@@ -358,10 +382,7 @@ function Loaded({
   }
 }
 
-function infoRows(
-  person: PersonDetail['person'],
-  today: Date,
-): { label: string; value: string }[] {
+function infoRows(person: PersonDetail['person'], today: Date): { label: string; value: string }[] {
   const dated = (label: string, date: string | null, reminder: string) => {
     const formatted = formatCalendarDate(date);
     if (!formatted) return null;
@@ -481,7 +502,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerButtonText: { fontSize: fontSizes.base, fontWeight: fontWeights.medium, color: colors.primary },
+  headerButtonText: {
+    fontSize: fontSizes.base,
+    fontWeight: fontWeights.medium,
+    color: colors.primary,
+  },
   banner: {
     gap: spacing.sm,
     padding: spacing.base,
@@ -566,7 +591,7 @@ const styles = StyleSheet.create({
   },
   fabPressed: { opacity: 0.85 },
   fabText: { fontSize: fontSizes.base, fontWeight: fontWeights.bold, color: colors.textOnPrimary },
-  busy: { ...StyleSheet.absoluteFillObject },
+  busy: { ...StyleSheet.absoluteFill },
   centered: {
     flex: 1,
     alignItems: 'center',

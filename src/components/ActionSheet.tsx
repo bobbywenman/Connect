@@ -77,7 +77,7 @@ export function ActionSheet({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
   sheet: {
     backgroundColor: colors.background,
     borderTopLeftRadius: radii.lg,
