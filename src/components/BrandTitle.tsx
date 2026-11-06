@@ -1,10 +1,12 @@
 import { StyleSheet, Text } from 'react-native';
 
+import { colors, fontSizes, fontWeights, spacing } from '@/constants';
+
 export interface BrandTitleProps {
   subtitle?: string;
 }
 
-/** App wordmark. Placeholder until the design system lands in KT-03. */
+/** App wordmark. */
 export function BrandTitle({ subtitle }: BrandTitleProps) {
   return (
     <>
@@ -17,6 +19,6 @@ export function BrandTitle({ subtitle }: BrandTitleProps) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 30, fontWeight: '700', color: '#1E3A5F' },
-  subtitle: { fontSize: 16, color: '#555555', marginTop: 8 },
+  title: { fontSize: fontSizes['2xl'], fontWeight: fontWeights.bold, color: colors.primary },
+  subtitle: { fontSize: fontSizes.base, color: colors.textSecondary, marginTop: spacing.sm },
 });
