@@ -144,10 +144,10 @@ export async function updatePerson(
 }
 
 const LIST_COLUMNS =
-  'id, first_name, last_name, preferred_name, photo_path, tags, job_title, is_self';
+  'id, first_name, last_name, preferred_name, photo_path, tags, job_title, is_self, updated_at, archived_at';
 
 export interface NetworkPeople {
-  /** Self person first, then members; otherwise unsorted (see `sortPeople`). Archived people excluded. */
+  /** Self person first, then members; otherwise unsorted (see `sortPeople`). Archived people excluded unless `includeArchived`. */
   people: NetworkPerson[];
   /** Relationships whose two ends are both in `people`. */
   relationships: RelationshipRow[];
@@ -161,13 +161,17 @@ export interface NetworkPeople {
  * membership row, D-2), and the user's relationships (RLS limits all three to the
  * caller), which are then narrowed to pairs inside the list so each row can name its label.
  */
-export async function listNetworkPeople(networkId: string): Promise<NetworkPeople> {
+export async function listNetworkPeople(
+  networkId: string,
+  options: { includeArchived?: boolean } = {},
+): Promise<NetworkPeople> {
+  let membersQuery = supabase
+    .from('persons')
+    .select(`${LIST_COLUMNS}, network_members!inner(network_id)`)
+    .eq('network_members.network_id', networkId);
+  if (!options.includeArchived) membersQuery = membersQuery.is('archived_at', null);
   const [members, self, relationships] = await Promise.all([
-    supabase
-      .from('persons')
-      .select(`${LIST_COLUMNS}, network_members!inner(network_id)`)
-      .eq('network_members.network_id', networkId)
-      .is('archived_at', null),
+    membersQuery,
     supabase.from('persons').select(LIST_COLUMNS).eq('is_self', true).is('archived_at', null),
     supabase
       .from('relationships')
@@ -192,4 +196,124 @@ export async function listNetworkPeople(networkId: string): Promise<NetworkPeopl
       (r) => ids.has(r.source_person_id) && ids.has(r.target_person_id),
     ) as RelationshipRow[],
   };
+}
+
+export interface DetailNetwork {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+/** The other end of a connection: just what a row needs. */
+export type ConnectionPerson = Pick<
+  Person,
+  | 'id'
+  | 'first_name'
+  | 'last_name'
+  | 'preferred_name'
+  | 'photo_path'
+  | 'updated_at'
+  | 'is_self'
+  | 'archived_at'
+  | 'job_title'
+  | 'tags'
+>;
+
+export interface PersonConnection {
+  relationship: RelationshipRow & { id: string };
+  person: ConnectionPerson;
+}
+
+export interface PersonDetail {
+  person: Person;
+  /** Networks the person belongs to, A-Z (empty for the self person, who is in all of them). */
+  networks: DetailNetwork[];
+  connections: PersonConnection[];
+}
+
+const CONNECTION_COLUMNS =
+  'id, first_name, last_name, preferred_name, photo_path, updated_at, is_self, archived_at, job_title, tags';
+
+/**
+ * Everything the detail screen shows, in two rounds: the person, their networks and their
+ * relationships in parallel, then the people at the other end of those relationships in one
+ * `in (...)` query. Returns null when the person does not exist (or is not the caller's).
+ */
+export async function getPersonDetail(id: string): Promise<PersonDetail | null> {
+  const [person, memberships, relationships] = await Promise.all([
+    supabase.from('persons').select('*').eq('id', id).maybeSingle(),
+    supabase.from('network_members').select('networks(id, name, color)').eq('person_id', id),
+    supabase
+      .from('relationships')
+      .select(
+        'id, source_person_id, target_person_id, type, inverse_type, custom_label, inverse_custom_label',
+      )
+      .or(`source_person_id.eq.${id},target_person_id.eq.${id}`),
+  ]);
+  if (person.error) throw person.error;
+  if (memberships.error) throw memberships.error;
+  if (relationships.error) throw relationships.error;
+  if (!person.data) return null;
+
+  const rows = relationships.data as (RelationshipRow & { id: string })[];
+  const otherOf = (r: RelationshipRow) =>
+    r.source_person_id === id ? r.target_person_id : r.source_person_id;
+  const otherIds = [...new Set(rows.map(otherOf))];
+  let others: ConnectionPerson[] = [];
+  if (otherIds.length > 0) {
+    const { data, error } = await supabase
+      .from('persons')
+      .select(CONNECTION_COLUMNS)
+      .in('id', otherIds);
+    if (error) throw error;
+    others = data;
+  }
+  const byId = new Map(others.map((p) => [p.id, p]));
+
+  const networks = memberships.data
+    .map((m) => m.networks)
+    .filter((n): n is DetailNetwork => !!n)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const connections = rows.flatMap((relationship) => {
+    const other = byId.get(otherOf(relationship));
+    return other ? [{ relationship, person: other }] : [];
+  });
+  return { person: person.data, networks, connections };
+}
+
+/** Hide a person from lists and study decks. The self person cannot be archived (D-2). */
+export async function archivePerson(id: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('persons')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('is_self', false)
+    .select('id');
+  if (error) throw error;
+  if (data.length === 0) throw new Error('This person cannot be archived.');
+}
+
+export async function unarchivePerson(id: string): Promise<void> {
+  const { error } = await supabase.from('persons').update({ archived_at: null }).eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Permanently delete a person. Their relationships and network memberships go with them
+ * (on delete cascade). The self person cannot be deleted (D-2): the filter and RLS both
+ * refuse, and deleting someone who is already gone is not an error.
+ */
+export async function deletePerson(id: string): Promise<void> {
+  const { error } = await supabase.from('persons').delete().eq('id', id).eq('is_self', false);
+  if (error) throw error;
+}
+
+/** Remove one network membership; the person stays in their other networks. */
+export async function removeFromNetwork(personId: string, networkId: string): Promise<void> {
+  const { error } = await supabase
+    .from('network_members')
+    .delete()
+    .eq('person_id', personId)
+    .eq('network_id', networkId);
+  if (error) throw error;
 }

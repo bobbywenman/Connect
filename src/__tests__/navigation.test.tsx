@@ -1,5 +1,6 @@
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
+import { createFakePeople } from '@/test-utils/fakePeople';
 import { fakeSupabase } from '@/test-utils/fakeSupabase';
 import { resetSession } from '@/store/session';
 
@@ -10,10 +11,14 @@ async function renderAt(url: string) {
 }
 
 describe('navigation shell', () => {
+  let uninstallPeople: () => void;
   beforeEach(() => {
     fakeSupabase.reset();
     resetSession();
+    // The person detail screen reads the people tables; an empty fake means "not found".
+    uninstallPeople = createFakePeople().install();
   });
+  afterEach(() => uninstallPeople());
 
   it('shows the welcome screen when signed out', async () => {
     const r = await renderAt('/');
@@ -72,7 +77,7 @@ describe('navigation shell', () => {
       ['tab: study', '/study', 'Study'],
       ['tab: events', '/events', 'Events'],
       ['tab: settings', '/settings', 'Settings'],
-      ['person detail (deep link path)', '/person/123', 'Person 123'],
+      ['person detail (deep link path)', '/person/123', 'Person not found'],
       ['relationship new', '/relationship/new', 'New relationship'],
       ['study session', '/study/session', 'Study session'],
       ['study complete', '/study/complete', 'Study complete'],
@@ -99,7 +104,9 @@ describe('navigation shell', () => {
 
     it('resolves the knowthem:// deep link to the person route', async () => {
       const r = await renderAt('/person/123');
-      await waitFor(() => expect(screen.getAllByText('Person 123').length).toBeGreaterThan(0));
+      await waitFor(() =>
+        expect(screen.getAllByText('Person not found').length).toBeGreaterThan(0),
+      );
       expect(r.getPathname()).toBe('/person/123');
       expect(r.getSegments()).toEqual(['(app)', 'person', '[id]']);
     });

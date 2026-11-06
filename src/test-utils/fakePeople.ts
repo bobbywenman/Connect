@@ -5,12 +5,18 @@ import { supabase } from '@/lib/supabase';
 
 type Row = Record<string, unknown>;
 type Op = 'select' | 'insert' | 'update' | 'delete';
-type Filter = { column: string; values: unknown[] };
+type Filter =
+  { column: string; values: unknown[] } | { anyOf: { column: string; value: string }[] };
 
 const OWNER = '00000000-0000-0000-0000-000000000001';
 
 export function createFakePeople() {
-  const tables: Record<string, Row[]> = { persons: [], network_members: [], relationships: [] };
+  const tables: Record<string, Row[]> = {
+    persons: [],
+    network_members: [],
+    relationships: [],
+    networks: [],
+  };
   const failures: { table: string; op: Op; error: Error }[] = [];
   let nextId = 1;
   const calls: { table: string; op: Op }[] = [];
@@ -23,6 +29,7 @@ export function createFakePeople() {
     const rows = tables[table]!;
     const matches = (r: Row) =>
       filters.every((f) => {
+        if ('anyOf' in f) return f.anyOf.some((c) => String(r[c.column]) === c.value);
         // Filter on an embedded table, e.g. `network_members.network_id` with `!inner`.
         if (f.column.startsWith('network_members.')) {
           const column = f.column.slice('network_members.'.length);
@@ -59,6 +66,9 @@ export function createFakePeople() {
         // on delete cascade
         const gone = new Set(removed.map((r) => r.id));
         tables.network_members = tables.network_members!.filter((m) => !gone.has(m.person_id));
+        tables.relationships = tables.relationships!.filter(
+          (rel) => !gone.has(rel.source_person_id) && !gone.has(rel.target_person_id),
+        );
       }
       return { data: removed, error: null };
     }
@@ -69,6 +79,12 @@ export function createFakePeople() {
         network_members: tables
           .network_members!.filter((m) => m.person_id === r.id)
           .map((m) => ({ network_id: m.network_id })),
+      }));
+    }
+    if (table === 'network_members' && columns.includes('networks(')) {
+      selected = selected.map((m) => ({
+        ...m,
+        networks: tables.networks!.find((n) => n.id === m.network_id) ?? null,
       }));
     }
     return { data: selected, error: null };
@@ -117,6 +133,15 @@ export function createFakePeople() {
         filters.push({ column, values: [value] });
         return b;
       },
+      or(expression: string) {
+        // Only the `column.eq.value,column.eq.value` form is supported.
+        const anyOf = expression.split(',').map((part) => {
+          const [column, , value] = part.split('.');
+          return { column: column!, value: value! };
+        });
+        filters.push({ anyOf });
+        return b;
+      },
       in(column: string, vals: unknown[]) {
         filters.push({ column, values: vals });
         return b;
@@ -143,6 +168,23 @@ export function createFakePeople() {
       networkIds.forEach((network_id) =>
         tables.network_members!.push({ network_id, person_id: id, owner_id: OWNER }),
       );
+      return id;
+    },
+    /** Seed a network row (for membership embeds). */
+    seedNetwork(row: Row) {
+      tables.networks!.push({ owner_id: OWNER, color: null, ...row });
+      return row.id as string;
+    },
+    /** Seed a relationship row. */
+    seedRelationship(row: Row) {
+      const id = (row.id as string) ?? `relationships-${nextId++}`;
+      tables.relationships!.push({
+        owner_id: OWNER,
+        custom_label: null,
+        inverse_custom_label: null,
+        ...row,
+        id,
+      });
       return id;
     },
     /** Route persons/network_members through this fake; returns an uninstall function. */

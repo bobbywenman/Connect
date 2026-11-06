@@ -22,7 +22,12 @@ export type NetworkPerson = Pick<
   | 'tags'
   | 'job_title'
   | 'is_self'
->;
+> & {
+  /** Cache-busting version of the photo. Optional so fixtures can leave it out. */
+  updated_at?: string;
+  /** Set when archived; shown only when the list has "Show archived" on. */
+  archived_at?: string | null;
+};
 
 export interface PeopleFilters {
   query?: string;

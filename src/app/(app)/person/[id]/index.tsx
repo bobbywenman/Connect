@@ -1,8 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { PersonDetailScreen } from '@/features/people/components/PersonDetailScreen';
 
 export default function PersonScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  return <ScreenPlaceholder title={`Person ${id}`} />;
+  const { id, networkId } = useLocalSearchParams<{ id: string; networkId?: string }>();
+  return <PersonDetailScreen personId={id} networkId={networkId} />;
 }

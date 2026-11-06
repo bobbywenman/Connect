@@ -4,14 +4,17 @@ import { buildRelationship } from '@/features/relationships';
 
 import type { NetworkPeople } from '../api';
 import { useNetworkPeople } from '../hooks';
+import { usePhotoUrls } from '../photoHooks';
 import type { NetworkPerson } from '../listing';
 import { NetworkPeopleScreen, StudyHeaderButton } from './NetworkPeopleScreen';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('../hooks');
+jest.mock('../photoHooks');
 
 const mockUseNetworkPeople = jest.mocked(useNetworkPeople);
+const mockUsePhotoUrls = jest.mocked(usePhotoUrls);
 
 function state(overrides: Record<string, unknown>) {
   mockUseNetworkPeople.mockReturnValue({
@@ -54,6 +57,7 @@ const data: NetworkPeople = {
 
 beforeEach(() => {
   mockPush.mockClear();
+  mockUsePhotoUrls.mockReturnValue({ data: {} } as unknown as ReturnType<typeof usePhotoUrls>);
 });
 
 /** Names shown in the list, in order, via each row's accessibility label. */
@@ -115,7 +119,7 @@ describe('NetworkPeopleScreen', () => {
     expect(screen.queryByLabelText(/Zoe Young/)).toBeNull();
     expect(screen.getByText('1 of 3')).toBeOnTheScreen();
     expect(refetch).not.toHaveBeenCalled();
-    expect(mockUseNetworkPeople).toHaveBeenCalledWith('n1');
+    expect(mockUseNetworkPeople).toHaveBeenCalledWith('n1', false);
   });
 
   it('shows No matches, and Clear brings the list back', async () => {
@@ -133,7 +137,51 @@ describe('NetworkPeopleScreen', () => {
     state({ data });
     await render(<NetworkPeopleScreen networkId="n1" />);
     await fireEvent.press(screen.getByLabelText('Ann Adams, Coworker of Zoe'));
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/person/[id]', params: { id: 'ann' } });
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/person/[id]',
+      params: { id: 'ann', networkId: 'n1' },
+    });
+  });
+
+  it('asks for archived people only when Show archived is on, and marks them', async () => {
+    const withArchived: NetworkPeople = {
+      ...data,
+      people: [...data.people, p('old', 'Olga', 'Old', { archived_at: '2026-01-01T00:00:00Z' })],
+    };
+    state({ data });
+    await render(<NetworkPeopleScreen networkId="n1" />);
+    expect(mockUseNetworkPeople).toHaveBeenLastCalledWith('n1', false);
+    expect(screen.queryByText('Archived')).toBeNull();
+
+    state({ data: withArchived });
+    await fireEvent.press(screen.getByRole('switch', { name: 'Show archived' }));
+    expect(mockUseNetworkPeople).toHaveBeenLastCalledWith('n1', true);
+    expect(screen.getByText('Archived')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Olga Old, Archived')).toBeOnTheScreen();
+    // The count in the summary and on the network ignores archived people.
+    await fireEvent.press(screen.getByLabelText('Olga Old, Archived'));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/person/[id]',
+      params: { id: 'old', networkId: 'n1' },
+    });
+  });
+
+  it('shows a row photo from the single shared photo request', async () => {
+    mockUsePhotoUrls.mockReturnValue({
+      data: { 'zoe.jpg': 'https://img.test/zoe.jpg' },
+    } as unknown as ReturnType<typeof usePhotoUrls>);
+    const withPhoto: NetworkPeople = {
+      ...data,
+      people: data.people.map((x) =>
+        x.id === 'zoe' ? { ...x, photo_path: 'zoe.jpg', updated_at: 'v1' } : x,
+      ),
+    };
+    state({ data: withPhoto });
+    await render(<NetworkPeopleScreen networkId="n1" />);
+    expect(mockUsePhotoUrls).toHaveBeenCalledWith(expect.arrayContaining(['zoe.jpg']));
+    expect(
+      screen.getByLabelText('Photo of Zoe Young', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
   });
 
   it('pre-fills the network when adding with the FAB', async () => {

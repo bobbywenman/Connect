@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Button, Chip, EmptyState } from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, radii, spacing } from '@/constants';
@@ -14,6 +14,7 @@ import {
 } from '@/features/relationships';
 
 import { useNetworkPeople } from '../hooks';
+import { usePhotoUrls } from '../photoHooks';
 import {
   collectRelationshipTypes,
   collectTags,
@@ -42,7 +43,13 @@ function toggle<T>(list: readonly T[], item: T): T[] {
 /** The people in one network (plus You), searchable and filterable on the device. */
 export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleScreenProps) {
   const router = useRouter();
-  const { data, isPending, isError, refetch, isRefetching } = useNetworkPeople(networkId);
+  const [showArchived, setShowArchived] = useState(false);
+  const { data, isPending, isError, refetch, isRefetching } = useNetworkPeople(
+    networkId,
+    showArchived,
+  );
+  // One request for every photo in the list, not one per row.
+  const { data: photoUrls } = usePhotoUrls(data?.people.map((p) => p.photo_path) ?? []);
 
   const [query, setQuery] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -80,8 +87,8 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
   );
 
   const openPerson = useCallback(
-    (id: string) => router.push({ pathname: '/person/[id]', params: { id } }),
-    [router],
+    (id: string) => router.push({ pathname: '/person/[id]', params: { id, networkId } }),
+    [router, networkId],
   );
   const addPerson = () => router.push({ pathname: '/person/new', params: { networkId } });
   const clearAll = () => {
@@ -101,13 +108,19 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
 
   const renderItem = useCallback(
     ({ item }: { item: NetworkPerson }) => (
-      <PersonRow person={item} label={prepared?.labels.get(item.id) ?? null} onPress={openPerson} />
+      <PersonRow
+        person={item}
+        label={prepared?.labels.get(item.id) ?? null}
+        onPress={openPerson}
+        photoUrl={item.photo_path ? (photoUrls?.[item.photo_path] ?? null) : null}
+      />
     ),
-    [prepared, openPerson],
+    [prepared, openPerson, photoUrls],
   );
 
   // Counts leave out You, so they agree with the network card ("8 people").
-  const matchCount = visible.filter((p) => !p.is_self).length;
+  const counted = (p: NetworkPerson) => !p.is_self && !p.archived_at;
+  const matchCount = visible.filter(counted).length;
   const filtering = hasActiveFilters(filters);
   const filterGroupCount = (tags.length > 0 ? 1 : 0) + (types.length > 0 ? 1 : 0);
 
@@ -134,6 +147,7 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
           ctaLabel="Add person"
           onCtaPress={addPerson}
         />
+        <ArchivedToggle value={showArchived} onChange={setShowArchived} />
       </View>
     );
   } else {
@@ -146,11 +160,12 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
             activeFilterCount={filterGroupCount}
             onOpenFilters={() => setFiltersOpen(true)}
           />
+          <ArchivedToggle value={showArchived} onChange={setShowArchived} />
           {filtering ? (
             <View style={styles.summary}>
               <View style={styles.summaryChips}>
                 <Text accessibilityLiveRegion="polite" style={styles.summaryText}>
-                  {matchCount} of {prepared.sorted.length - 1}
+                  {matchCount} of {prepared.sorted.filter(counted).length}
                 </Text>
                 {tags.map((tag) => (
                   <Chip
@@ -256,6 +271,28 @@ export function StudyHeaderButton({ networkId }: { networkId: string }) {
   );
 }
 
+/** "Show archived" switch. Archived people are hidden from lists and study decks by default. */
+function ArchivedToggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel="Show archived"
+      accessibilityState={{ checked: value }}
+      onPress={() => onChange(!value)}
+      style={styles.toggle}
+    >
+      <Text style={styles.toggleText}>Show archived</Text>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        accessible={false}
+        importantForAccessibility="no"
+        trackColor={{ true: colors.primary }}
+      />
+    </Pressable>
+  );
+}
+
 function Separator() {
   return <View style={styles.separator} />;
 }
@@ -292,6 +329,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   summaryText: { fontSize: fontSizes.sm, color: colors.textSecondary },
+  toggle: {
+    minHeight: minTapTarget,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggleText: { fontSize: fontSizes.sm, color: colors.textSecondary },
   clear: { minHeight: minTapTarget, minWidth: minTapTarget, justifyContent: 'center' },
   clearText: { fontSize: fontSizes.sm, fontWeight: fontWeights.bold, color: colors.accent },
   list: { paddingBottom: FAB_SIZE + spacing.xl },

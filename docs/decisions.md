@@ -107,3 +107,13 @@ A picked photo is cropped square, resized to at most 500x500 and encoded as JPEG
 Unlike the per-network list (D-12), global search covers every person, tag and note, so it is a SQL function, `search_people(q, max_results)` (security invoker, authenticated only). It matches names (prefix, substring, trigram similarity), tags, job title and notes, ignoring case and accents with `unaccent`, and ranks names above tags above job title above notes. Archived people are excluded; "You" is included. No extra index: `unaccent()` is only STABLE so it cannot back an expression index, and the search is already limited to one owner's rows (about 30 ms for 500 people locally). Revisit with an immutable unaccent wrapper plus trigram indexes if accounts grow into the many thousands. Queries under 2 characters are not sent and typing is debounced by 200 ms.
 
 Recent searches (last 8) are stored on the device only, in the same chunked SecureStore wrapper as the auth session (localStorage on web), under a per-user key.
+
+## D-15 · Archive, delete and the person menu (KT-17, KT-18)
+
+**Decided:** 2026-11-06 by engineering
+
+- Archiving sets `archived_at`; it is reversible ("Restore" in the banner on an archived person or in the menu) and needs no confirmation. Deleting is permanent (relationships and memberships cascade) and always asks first, saying how many relationships go too. The self person can be neither archived nor deleted (D-2): `archivePerson` and `deletePerson` filter on `is_self = false`, and the screen hides the menu.
+- Archived people are hidden from network lists unless "Show archived" is on (then greyed with an "Archived" badge, still openable). They are not counted on network cards or in "N of M".
+- "Remove from <network>" appears only when the detail screen was opened from that network (`?networkId=`). If it is the person's last network, the app warns and offers "Delete <name>" or "Remove anyway". The warning uses "them", since pronouns are free text.
+- The "..." menu and the last-network warning use an in-app `ActionSheet` (the delete confirmation uses `ConfirmDialog`), not `Alert`, which does nothing on web. Switching between modals waits for the first to close on iOS.
+- Relationship wording on the detail screen: badges are from the person's side ("Cousin of Maria", "Your parent" when the other end is You, as in the list); connection rows say what the connection is to this person ("Bob's child", "Your sister" on the self person's page).

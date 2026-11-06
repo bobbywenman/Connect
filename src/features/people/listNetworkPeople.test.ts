@@ -49,6 +49,15 @@ describe('listNetworkPeople', () => {
     expect(result.selfId).toBeUndefined();
   });
 
+  it('includes archived members when asked', async () => {
+    people.seedPerson({ id: 'a', first_name: 'Ann' }, ['n1']);
+    people.seedPerson({ id: 'z', first_name: 'Zed', archived_at: '2026-01-01T00:00:00Z' }, ['n1']);
+
+    const result = await listNetworkPeople('n1', { includeArchived: true });
+
+    expect(result.people.map((p) => p.id)).toEqual(['a', 'z']);
+  });
+
   it('keeps only relationships between listed people, using three queries', async () => {
     people.seedPerson({ id: 'me', first_name: 'Alex', is_self: true });
     people.seedPerson({ id: 'a', first_name: 'Ann' }, ['n1']);
