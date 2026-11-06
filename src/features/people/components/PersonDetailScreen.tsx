@@ -460,7 +460,11 @@ function ConnectionRow({
           {subtitle}
         </Text>
       </View>
-      {person.archived_at ? <Badge label="Archived" color={colors.textSecondary} /> : null}
+      {person.archived_at ? (
+        <View>
+          <Badge label="Archived" color={colors.textSecondary} />
+        </View>
+      ) : null}
       <Ionicons
         name="chevron-forward"
         size={20}

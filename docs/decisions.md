@@ -99,3 +99,13 @@ The Supabase client uses the PKCE flow, so reset emails land on `<redirectTo>?co
 **Decided:** 2026-11-06 by engineering (KT-15)
 
 A picked photo is cropped square, resized to at most 500x500 and encoded as JPEG (0.8) on the device, then held locally until the person form is saved. After the person row exists, the photo is uploaded to `avatars/{owner_id}/{person_id}.jpg` (upsert) and `photo_path` is set. This avoids orphaned uploads on cancel and works the same for new and existing people. If only the photo step fails, the person is still saved and the user is told to retry. Signed URLs last 1 hour and are cached for 50 minutes; the disk-cache key is `{photo_path}?v={updated_at}` so a replaced photo (same path) refreshes.
+
+## D-14 · Archive, delete and the person menu (KT-17, KT-18)
+
+**Decided:** 2026-11-06 by engineering
+
+- Archiving sets `archived_at`; it is reversible ("Restore" in the banner on an archived person or in the menu) and needs no confirmation. Deleting is permanent (relationships and memberships cascade) and always asks first, saying how many relationships go too. The self person can be neither archived nor deleted (D-2): `archivePerson` and `deletePerson` filter on `is_self = false`, and the screen hides the menu.
+- Archived people are hidden from network lists unless "Show archived" is on (then greyed with an "Archived" badge, still openable). They are not counted on network cards or in "N of M".
+- "Remove from <network>" appears only when the detail screen was opened from that network (`?networkId=`). If it is the person's last network, the app warns and offers "Delete <name>" or "Remove anyway". The warning uses "them", since pronouns are free text.
+- The "..." menu and the last-network warning use an in-app `ActionSheet` (the delete confirmation uses `ConfirmDialog`), not `Alert`, which does nothing on web. Switching between modals waits for the first to close on iOS.
+- Relationship wording on the detail screen: badges are from the person's side ("Cousin of Maria", "Your parent" when the other end is You, as in the list); connection rows say what the connection is to this person ("Bob's child", "Your sister" on the self person's page).

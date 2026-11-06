@@ -54,7 +54,11 @@ export const PersonRow = memo(function PersonRow({
           </Text>
         ) : null}
       </View>
-      {archived ? <Badge label="Archived" color={colors.textSecondary} /> : null}
+      {archived ? (
+        <View>
+          <Badge label="Archived" color={colors.textSecondary} />
+        </View>
+      ) : null}
       <Ionicons
         name="chevron-forward"
         size={20}
