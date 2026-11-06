@@ -16,7 +16,10 @@ export interface RelationshipRow {
   type: RelationshipTypeId;
   /** What the target is to the source. */
   inverse_type: RelationshipTypeId;
+  /** Custom only: what the source is to the target. */
   custom_label: string | null;
+  /** Custom only: what the target is to the source. */
+  inverse_custom_label: string | null;
 }
 
 /** Name fields used for display. */
@@ -33,9 +36,7 @@ export interface CustomLabels {
   inverseLabel?: string;
 }
 
-/** Delimiter joining the two custom labels inside the single custom_label column. */
-export const CUSTOM_LABEL_SEPARATOR = '|';
-/** Matches the database check on relationships.custom_label. */
+/** Matches the database checks on custom_label and inverse_custom_label. */
 export const MAX_CUSTOM_LABEL_LENGTH = 50;
 
 const TYPES_BY_ID: ReadonlyMap<string, RelationshipType> = new Map(
@@ -84,28 +85,10 @@ export function inverseOf(id: string): RelationshipTypeId {
 function cleanLabel(raw: string): string {
   const label = raw.trim();
   if (label.length === 0) throw new Error('Custom label cannot be empty');
-  if (label.includes(CUSTOM_LABEL_SEPARATOR)) {
-    throw new Error(`Custom label cannot contain "${CUSTOM_LABEL_SEPARATOR}"`);
-  }
-  return label;
-}
-
-function encodeCustomLabel(custom: CustomLabels): string {
-  const label = cleanLabel(custom.label);
-  const inverse = custom.inverseLabel === undefined ? label : cleanLabel(custom.inverseLabel);
-  const encoded = inverse === label ? label : `${label}${CUSTOM_LABEL_SEPARATOR}${inverse}`;
-  if (encoded.length > MAX_CUSTOM_LABEL_LENGTH) {
+  if (label.length > MAX_CUSTOM_LABEL_LENGTH) {
     throw new Error(`Custom label must be ${MAX_CUSTOM_LABEL_LENGTH} characters or fewer`);
   }
-  return encoded;
-}
-
-/** Splits a stored custom_label into the source-side and target-side wording. */
-export function decodeCustomLabel(stored: string | null): { label: string; inverseLabel: string } {
-  const text = stored ?? '';
-  const at = text.indexOf(CUSTOM_LABEL_SEPARATOR);
-  if (at === -1) return { label: text, inverseLabel: text };
-  return { label: text.slice(0, at), inverseLabel: text.slice(at + 1) };
+  return label;
 }
 
 /**
@@ -122,12 +105,15 @@ export function buildRelationship(
   const type = requireType(typeId);
   if (type.id === 'custom') {
     if (!custom) throw new Error('Custom relationships need a label');
+    const label = cleanLabel(custom.label);
     return {
       source_person_id: sourceId,
       target_person_id: targetId,
       type: 'custom',
       inverse_type: 'custom',
-      custom_label: encodeCustomLabel(custom),
+      custom_label: label,
+      inverse_custom_label:
+        custom.inverseLabel === undefined ? label : cleanLabel(custom.inverseLabel),
     };
   }
   return {
@@ -136,6 +122,7 @@ export function buildRelationship(
     type: type.id,
     inverse_type: type.inverse,
     custom_label: null,
+    inverse_custom_label: null,
   };
 }
 
@@ -162,8 +149,9 @@ export function describeFrom(
     otherPersonId: isSource ? relationship.target_person_id : relationship.source_person_id,
   };
   if (type === 'custom') {
-    const decoded = decodeCustomLabel(relationship.custom_label);
-    view.customLabel = isSource ? decoded.label : decoded.inverseLabel;
+    const stored = isSource ? relationship.custom_label : relationship.inverse_custom_label;
+    // A missing label falls back to the catalog label ("Custom") when displayed.
+    if (stored) view.customLabel = stored;
   }
   return view;
 }

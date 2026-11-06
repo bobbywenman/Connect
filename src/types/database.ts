@@ -179,14 +179,14 @@ isOneToOne: false
                   ]
                 },"relationships": {
                   Row: {
-                    "created_at": string,"custom_label": string | null,"id": string,"inverse_type": string,"notes": string | null,"owner_id": string,"source_person_id": string,"target_person_id": string,"type": string,"updated_at": string
+                    "created_at": string,"custom_label": string | null,"id": string,"inverse_custom_label": string | null,"inverse_type": string,"notes": string | null,"owner_id": string,"source_person_id": string,"target_person_id": string,"type": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"custom_label"?: string | null,"id"?: string,"inverse_type": string,"notes"?: string | null,"owner_id"?: string,"source_person_id": string,"target_person_id": string,"type": string,"updated_at"?: string
+                    "created_at"?: string,"custom_label"?: string | null,"id"?: string,"inverse_custom_label"?: string | null,"inverse_type": string,"notes"?: string | null,"owner_id"?: string,"source_person_id": string,"target_person_id": string,"type": string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"custom_label"?: string | null,"id"?: string,"inverse_type"?: string,"notes"?: string | null,"owner_id"?: string,"source_person_id"?: string,"target_person_id"?: string,"type"?: string,"updated_at"?: string
+                    "created_at"?: string,"custom_label"?: string | null,"id"?: string,"inverse_custom_label"?: string | null,"inverse_type"?: string,"notes"?: string | null,"owner_id"?: string,"source_person_id"?: string,"target_person_id"?: string,"type"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {

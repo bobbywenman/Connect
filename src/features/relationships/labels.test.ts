@@ -1,7 +1,6 @@
 import {
   badgeLabel,
   buildRelationship,
-  decodeCustomLabel,
   describeFrom,
   displayName,
   getRelationshipType,
@@ -132,6 +131,7 @@ describe('buildRelationship', () => {
       type: 'parent',
       inverse_type: 'child',
       custom_label: null,
+      inverse_custom_label: null,
     });
   });
 
@@ -148,6 +148,7 @@ describe('buildRelationship', () => {
       type: 'custom',
       inverse_type: 'custom',
       custom_label: 'Climbing partner',
+      inverse_custom_label: 'Climbing partner',
     });
   });
 
@@ -156,16 +157,17 @@ describe('buildRelationship', () => {
       label: 'Landlord',
       inverseLabel: 'Tenant',
     });
-    expect(row.custom_label).toBe('Landlord|Tenant');
-    expect(decodeCustomLabel(row.custom_label)).toEqual({
-      label: 'Landlord',
-      inverseLabel: 'Tenant',
-    });
+    expect(row.custom_label).toBe('Landlord');
+    expect(row.inverse_custom_label).toBe('Tenant');
   });
 
-  it('collapses an identical inverse label', () => {
-    const row = buildRelationship(SARAH, MARIA, 'custom', { label: 'Pal', inverseLabel: 'Pal' });
-    expect(row.custom_label).toBe('Pal');
+  it('allows labels containing a pipe and exactly 50 characters', () => {
+    const row = buildRelationship(SARAH, MARIA, 'custom', {
+      label: 'a|b',
+      inverseLabel: 'c'.repeat(50),
+    });
+    expect(row.custom_label).toBe('a|b');
+    expect(row.inverse_custom_label).toHaveLength(50);
   });
 
   it('rejects self links', () => {
@@ -183,23 +185,15 @@ describe('buildRelationship', () => {
 
   it('validates custom labels', () => {
     expect(() => buildRelationship(SARAH, MARIA, 'custom', { label: '   ' })).toThrow('empty');
-    expect(() => buildRelationship(SARAH, MARIA, 'custom', { label: 'a|b' })).toThrow(
-      'cannot contain',
-    );
     expect(() =>
       buildRelationship(SARAH, MARIA, 'custom', { label: 'x', inverseLabel: ' ' }),
     ).toThrow('empty');
+    expect(() => buildRelationship(SARAH, MARIA, 'custom', { label: 'a'.repeat(51) })).toThrow(
+      '50 characters',
+    );
     expect(() =>
-      buildRelationship(SARAH, MARIA, 'custom', {
-        label: 'a'.repeat(30),
-        inverseLabel: 'b'.repeat(30),
-      }),
+      buildRelationship(SARAH, MARIA, 'custom', { label: 'x', inverseLabel: 'b'.repeat(51) }),
     ).toThrow('50 characters');
-  });
-
-  it('decodes null and missing inverse', () => {
-    expect(decodeCustomLabel(null)).toEqual({ label: '', inverseLabel: '' });
-    expect(decodeCustomLabel('Pal')).toEqual({ label: 'Pal', inverseLabel: 'Pal' });
   });
 });
 
@@ -221,6 +215,16 @@ describe('describeFrom', () => {
     });
     expect(describeFrom(custom, SARAH).customLabel).toBe('Landlord');
     expect(describeFrom(custom, MARIA).customLabel).toBe('Tenant');
+  });
+
+  it('falls back to the catalog label when a custom row has no label', () => {
+    const bare = {
+      ...buildRelationship(SARAH, MARIA, 'custom', { label: 'x' }),
+      custom_label: null,
+      inverse_custom_label: null,
+    };
+    expect(describeFrom(bare, SARAH).customLabel).toBeUndefined();
+    expect(badgeLabel(bare, MARIA, names)).toBe('Custom of Sarah');
   });
 
   it('throws when the viewer is not in the relationship', () => {
