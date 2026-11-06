@@ -8,11 +8,13 @@
  *   ['networks', id]                   one network
  *   ['persons', { networkId }]         people list, filtered
  *   ['person', id]                     one person
+ *   ['customRelationshipTypes']        the user's custom relationship labels
  *
  * Always build keys with this module so they stay consistent.
  */
 export const queryKeys = {
   profile: ['profile'] as const,
+  customRelationshipTypes: ['customRelationshipTypes'] as const,
   networks: {
     all: ['networks'] as const,
     detail: (id: string) => ['networks', id] as const,

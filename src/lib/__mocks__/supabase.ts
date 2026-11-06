@@ -48,21 +48,80 @@ const auth = {
   }),
 };
 
-const from = jest.fn((_table: string) => ({
-  select: () => ({
-    eq: () => ({
-      maybeSingle: async () => ({ data: fake.profile, error: fake.profileError }),
-    }),
-  }),
-  update: (values: { onboarding_complete?: boolean }) => ({
-    eq: async () => {
-      if (fake.profile && values.onboarding_complete !== undefined) {
-        fake.profile = { ...fake.profile, onboarding_complete: values.onboarding_complete };
-      }
-      return { error: null };
+type CustomTypeRow = {
+  id: string;
+  owner_id: string;
+  label: string;
+  inverse_label: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Rows of custom_relationship_types, all owners (RLS is not simulated; tests seed the caller's rows). */
+const customTypes = {
+  rows: [] as CustomTypeRow[],
+  error: null as Error | null,
+  nextId: 1,
+};
+
+const customTypesTable = {
+  select: (_columns: string) => ({
+    order: async (column: 'label', options: { ascending: boolean } = { ascending: true }) => {
+      if (customTypes.error) return { data: null, error: customTypes.error };
+      const sign = options.ascending ? 1 : -1;
+      const data = [...customTypes.rows].sort((a, b) => sign * a[column].localeCompare(b[column]));
+      return { data, error: null };
     },
   }),
-}));
+  insert: (values: { label: string; inverse_label: string }) => ({
+    select: () => ({
+      single: async () => {
+        if (customTypes.error) return { data: null, error: customTypes.error };
+        // Mirror the unique index on (owner_id, lower(label)).
+        const clash = customTypes.rows.some(
+          (r) =>
+            r.owner_id === DEMO_USER_ID && r.label.toLowerCase() === values.label.toLowerCase(),
+        );
+        if (clash) {
+          return {
+            data: null,
+            error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+          };
+        }
+        const now = new Date(0).toISOString();
+        const row: CustomTypeRow = {
+          id: `ct-${customTypes.nextId++}`,
+          owner_id: DEMO_USER_ID,
+          label: values.label,
+          inverse_label: values.inverse_label,
+          created_at: now,
+          updated_at: now,
+        };
+        customTypes.rows.push(row);
+        return { data: row, error: null };
+      },
+    }),
+  }),
+};
+
+const from = jest.fn((table: string) => {
+  if (table === 'custom_relationship_types') return customTypesTable;
+  return {
+    select: () => ({
+      eq: () => ({
+        maybeSingle: async () => ({ data: fake.profile, error: fake.profileError }),
+      }),
+    }),
+    update: (values: { onboarding_complete?: boolean }) => ({
+      eq: async () => {
+        if (fake.profile && values.onboarding_complete !== undefined) {
+          fake.profile = { ...fake.profile, onboarding_complete: values.onboarding_complete };
+        }
+        return { error: null };
+      },
+    }),
+  };
+});
 
 export const supabase = { auth, from };
 
@@ -75,6 +134,9 @@ export const fakeSupabase = {
     fake.session = null;
     fake.profile = { onboarding_complete: true };
     fake.profileError = null;
+    customTypes.rows = [];
+    customTypes.error = null;
+    customTypes.nextId = 1;
     auth.onAuthStateChange.mockClear();
     auth.signInWithPassword.mockClear();
     auth.signOut.mockClear();
@@ -88,6 +150,23 @@ export const fakeSupabase = {
   },
   setProfileError(error: Error | null) {
     fake.profileError = error;
+  },
+  /** Seed custom_relationship_types rows for the signed-in demo user. */
+  setCustomRelationshipTypes(rows: { label: string; inverse_label: string }[]) {
+    customTypes.rows = rows.map((r, i) => ({
+      id: `ct-${customTypes.nextId++}`,
+      owner_id: DEMO_USER_ID,
+      label: r.label,
+      inverse_label: r.inverse_label,
+      created_at: new Date(i).toISOString(),
+      updated_at: new Date(i).toISOString(),
+    }));
+  },
+  getCustomRelationshipTypes() {
+    return [...customTypes.rows];
+  },
+  setCustomRelationshipTypesError(error: Error | null) {
+    customTypes.error = error;
   },
   /** Pretend a stored session exists, so INITIAL_SESSION delivers it. */
   setStoredSession(signedIn: boolean) {
