@@ -12,11 +12,13 @@ import {
   getPersonDetail,
   getSelfPerson,
   listNetworkPeople,
+  listNewThisMonth,
   removeFromNetwork,
   unarchivePerson,
   updatePerson,
   type PersonFields,
 } from './api';
+import { startOfMonth } from './newThisMonth';
 
 export function usePerson(id: string | undefined) {
   return useQuery({
@@ -42,6 +44,18 @@ export function useSelfPerson() {
     queryKey: queryKeys.person.self,
     queryFn: () => getSelfPerson(userId as string),
     enabled: userId !== null,
+  });
+}
+
+/**
+ * People added this month (KT-28). Keyed under `['persons', ...]`, so every change to people
+ * refreshes it. The key includes the month start, so the list is refetched once the month rolls over.
+ */
+export function useNewThisMonth() {
+  const monthStart = startOfMonth(new Date()).toISOString();
+  return useQuery({
+    queryKey: queryKeys.persons.newThisMonth(monthStart),
+    queryFn: () => listNewThisMonth(new Date()),
   });
 }
 

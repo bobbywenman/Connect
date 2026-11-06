@@ -29,6 +29,8 @@ export const queryKeys = {
       ['persons', filter] as const,
     /** Every non-archived person, for pickers. */
     picker: ['persons', 'picker'] as const,
+    /** People added this month; `monthStart` is the ISO start of the month, so a new month is a new key. */
+    newThisMonth: (monthStart: string) => ['persons', 'newThisMonth', monthStart] as const,
   },
   events: {
     all: ['events'] as const,

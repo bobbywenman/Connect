@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
+import { useNewThisMonth } from '@/features/people/hooks';
+
 import type { NetworkSummary } from '../api';
 import { useNetworks } from '../hooks';
 import { NetworksHome } from './NetworksHome';
@@ -7,8 +9,12 @@ import { NetworksHome } from './NetworksHome';
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('../hooks');
+// The "New this month" section (KT-28) reads people; these tests cover networks only unless they say otherwise.
+jest.mock('@/features/people/hooks', () => ({ useNewThisMonth: jest.fn(() => ({ data: [] })) }));
+jest.mock('@/features/people/photoHooks', () => ({ usePhotoUrls: jest.fn(() => ({ data: {} })) }));
 
 const mockUseNetworks = jest.mocked(useNetworks);
+const mockUseNewThisMonth = jest.mocked(useNewThisMonth);
 
 function state(overrides: Record<string, unknown>) {
   mockUseNetworks.mockReturnValue({
@@ -35,6 +41,9 @@ const networks: NetworkSummary[] = [
 
 beforeEach(() => {
   mockPush.mockClear();
+  mockUseNewThisMonth.mockReturnValue({ data: [] } as unknown as ReturnType<
+    typeof useNewThisMonth
+  >);
 });
 
 describe('NetworksHome', () => {
@@ -65,6 +74,31 @@ describe('NetworksHome', () => {
       await list.props.refreshControl.props.onRefresh();
     });
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows "New this month" above "Your networks" when people were added', async () => {
+    state({ data: networks });
+    mockUseNewThisMonth.mockReturnValue({
+      data: [
+        {
+          id: 'ann',
+          first_name: 'Ann',
+          last_name: null,
+          preferred_name: null,
+          photo_path: null,
+          tags: [],
+          job_title: null,
+          is_self: false,
+          created_at: '2026-11-03T10:00:00Z',
+          networks: [],
+        },
+      ],
+    } as unknown as ReturnType<typeof useNewThisMonth>);
+    await render(<NetworksHome />);
+    const header = screen.getByRole('header', { name: 'New this month · 1' });
+    expect(header).toBeOnTheScreen();
+    expect(screen.getByText('Your networks')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Ann' })).toBeOnTheScreen();
   });
 
   it('shows the empty state with a create CTA', async () => {

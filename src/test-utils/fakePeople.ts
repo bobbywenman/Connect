@@ -6,7 +6,10 @@ import { supabase } from '@/lib/supabase';
 type Row = Record<string, unknown>;
 type Op = 'select' | 'insert' | 'update' | 'delete';
 type Filter =
-  { column: string; values: unknown[] } | { anyOf: { column: string; value: string }[] };
+  | { column: string; values: unknown[] }
+  | { anyOf: { column: string; value: string }[] }
+  // Compares strings (ISO timestamps sort correctly as strings).
+  | { column: string; gte: string };
 
 const OWNER = '00000000-0000-0000-0000-000000000001';
 
@@ -23,7 +26,14 @@ export function createFakePeople() {
   let nextId = 1;
   const calls: { table: string; op: Op }[] = [];
 
-  function execute(table: string, op: Op, values: unknown, filters: Filter[], columns: string) {
+  function execute(
+    table: string,
+    op: Op,
+    values: unknown,
+    filters: Filter[],
+    columns: string,
+    orderBy?: { column: string; ascending: boolean },
+  ) {
     calls.push({ table, op });
     const failure = failures.find((f) => f.table === table && f.op === op);
     if (failure) return { data: null, error: failure.error };
@@ -32,6 +42,7 @@ export function createFakePeople() {
     const matches = (r: Row) =>
       filters.every((f) => {
         if ('anyOf' in f) return f.anyOf.some((c) => String(r[c.column]) === c.value);
+        if ('gte' in f) return String(r[f.column] ?? '') >= f.gte;
         // Filter on an embedded table, e.g. `network_members.network_id` with `!inner`.
         if (f.column.startsWith('network_members.')) {
           const column = f.column.slice('network_members.'.length);
@@ -89,12 +100,25 @@ export function createFakePeople() {
       return { data: removed, error: null };
     }
     let selected = rows.filter(matches).map((r) => ({ ...r }));
+    if (orderBy) {
+      const { column, ascending } = orderBy;
+      const sign = ascending ? 1 : -1;
+      selected.sort(
+        (a, b) => sign * String(a[column] ?? '').localeCompare(String(b[column] ?? '')),
+      );
+    }
     if (table === 'persons' && columns.includes('network_members')) {
+      // `network_members(networks(...))` embeds the network rows; plain `network_members(network_id)` does not.
+      const nested = columns.includes('networks(');
       selected = selected.map((r) => ({
         ...r,
         network_members: tables
           .network_members!.filter((m) => m.person_id === r.id)
-          .map((m) => ({ network_id: m.network_id })),
+          .map((m) =>
+            nested
+              ? { networks: tables.networks!.find((n) => n.id === m.network_id) ?? null }
+              : { network_id: m.network_id },
+          ),
       }));
     }
     if (table === 'network_members' && columns.includes('networks(')) {
@@ -110,8 +134,9 @@ export function createFakePeople() {
     let op: Op = 'select';
     let values: unknown;
     let columns = '*';
+    let orderBy: { column: string; ascending: boolean } | undefined;
     const filters: Filter[] = [];
-    const run = () => execute(table, op, values, filters, columns);
+    const run = () => execute(table, op, values, filters, columns, orderBy);
     const one = (required: boolean) => {
       const res = run();
       if (res.error) return res;
@@ -160,6 +185,14 @@ export function createFakePeople() {
       },
       in(column: string, vals: unknown[]) {
         filters.push({ column, values: vals });
+        return b;
+      },
+      gte(column: string, value: string) {
+        filters.push({ column, gte: value });
+        return b;
+      },
+      order(column: string, options: { ascending?: boolean } = {}) {
+        orderBy = { column, ascending: options.ascending ?? true };
         return b;
       },
       single: async () => one(true),

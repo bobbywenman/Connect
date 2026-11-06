@@ -5,6 +5,7 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'rea
 
 import { Button, Card, EmptyState, Screen } from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, radii, spacing } from '@/constants';
+import { NewThisMonthSection } from '@/features/people/components/NewThisMonthSection';
 
 import type { NetworkSummary } from '../api';
 import { useNetworks } from '../hooks';
@@ -81,6 +82,7 @@ export function NetworksHome() {
 
   return (
     <Screen edges={['top']}>
+      <NewThisMonthSection />
       <Text accessibilityRole="header" style={styles.heading}>
         Your networks
       </Text>

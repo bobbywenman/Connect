@@ -10,6 +10,7 @@ export default function AppLayout() {
       <Stack.Screen name="person/[id]/index" options={{ title: 'Person' }} />
       <Stack.Screen name="person/[id]/edit" options={{ title: 'Edit person' }} />
       <Stack.Screen name="person/new" options={{ title: 'New person' }} />
+      <Stack.Screen name="people/new-this-month" options={{ title: 'New this month' }} />
       <Stack.Screen
         name="relationship/new"
         options={{ title: 'New relationship', presentation: 'modal' }}

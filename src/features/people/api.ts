@@ -12,6 +12,7 @@ import type { Database } from '@/types/database';
 
 import { orderedPair, type Dismissal, type DuplicatePerson } from './duplicates';
 import type { NetworkPerson } from './listing';
+import { startOfMonth } from './newThisMonth';
 import type { PersonFormValues } from './schemas';
 
 export type Person = Database['public']['Tables']['persons']['Row'];
@@ -283,6 +284,44 @@ export async function getPersonDetail(id: string): Promise<PersonDetail | null> 
 }
 
 /** Hide a person from lists and study decks. The self person cannot be archived (D-2). */
+export interface NewThisMonthNetwork {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+/** A person added since the start of this month, with the networks they are in (A-Z). */
+export type NewThisMonthPerson = NetworkPerson & {
+  created_at: string;
+  networks: NewThisMonthNetwork[];
+};
+
+const NEW_THIS_MONTH_COLUMNS =
+  'id, first_name, last_name, preferred_name, photo_path, tags, job_title, is_self, updated_at, created_at, archived_at, network_members(networks(id, name, color))';
+
+/**
+ * Non-archived people, excluding You, created on or after the first day of `now`'s month
+ * (local time), newest first. One query: the networks come embedded through network_members.
+ */
+export async function listNewThisMonth(now: Date = new Date()): Promise<NewThisMonthPerson[]> {
+  const { data, error } = await supabase
+    .from('persons')
+    .select(NEW_THIS_MONTH_COLUMNS)
+    .eq('is_self', false)
+    .is('archived_at', null)
+    .gte('created_at', startOfMonth(now).toISOString())
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+
+  return data.map(({ network_members, ...person }) => ({
+    ...person,
+    networks: network_members
+      .map((m) => m.networks)
+      .filter((n): n is NewThisMonthNetwork => n !== null)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  }));
+}
+
 export async function archivePerson(id: string): Promise<void> {
   const { data, error } = await supabase
     .from('persons')
