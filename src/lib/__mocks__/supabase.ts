@@ -104,8 +104,89 @@ const customTypesTable = {
   }),
 };
 
+type NetworkRow = {
+  id: string;
+  name: string;
+  type: string;
+  color: string | null;
+  description: string | null;
+};
+
+/** In-memory networks, plus how many people each one holds and how many of those are only in it. */
+const networks = {
+  rows: [] as NetworkRow[],
+  onlyPeople: {} as Record<string, number>,
+  error: null as Error | null,
+  nextId: 1,
+};
+
+const networkColumns = (row: NetworkRow) => ({
+  id: row.id,
+  name: row.name,
+  type: row.type,
+  color: row.color,
+  description: row.description,
+});
+
+const networksTable = {
+  select: (_columns: string) => ({
+    eq: (_column: 'id', id: string) => ({
+      maybeSingle: async () => {
+        if (networks.error) return { data: null, error: networks.error };
+        const row = networks.rows.find((r) => r.id === id);
+        return { data: row ? networkColumns(row) : null, error: null };
+      },
+    }),
+    order: async () => {
+      if (networks.error) return { data: null, error: networks.error };
+      return {
+        data: networks.rows.map((r) => ({ ...networkColumns(r), person_count: 0 })),
+        error: null,
+      };
+    },
+  }),
+  insert: (values: Omit<NetworkRow, 'id'>) => ({
+    select: (_columns: string) => ({
+      single: async () => {
+        if (networks.error) return { data: null, error: networks.error };
+        const row: NetworkRow = { id: `net-${networks.nextId++}`, ...values };
+        networks.rows.push(row);
+        return { data: networkColumns(row), error: null };
+      },
+    }),
+  }),
+  update: (values: Partial<NetworkRow>) => ({
+    eq: (_column: 'id', id: string) => ({
+      select: (_columns: string) => ({
+        single: async () => {
+          if (networks.error) return { data: null, error: networks.error };
+          const index = networks.rows.findIndex((r) => r.id === id);
+          const existing = networks.rows[index];
+          if (!existing) return { data: null, error: new Error('not found') };
+          const row = { ...existing, ...values };
+          networks.rows[index] = row;
+          return { data: networkColumns(row), error: null };
+        },
+      }),
+    }),
+  }),
+};
+
+const rpc = jest.fn(async (fn: string, args: { network_id: string }) => {
+  if (networks.error) return { data: null, error: networks.error };
+  if (fn === 'count_people_only_in_network') {
+    return { data: networks.onlyPeople[args.network_id] ?? 0, error: null };
+  }
+  if (fn === 'delete_network') {
+    networks.rows = networks.rows.filter((r) => r.id !== args.network_id);
+    return { data: networks.onlyPeople[args.network_id] ?? 0, error: null };
+  }
+  return { data: null, error: new Error(`unknown rpc ${fn}`) };
+});
+
 const from = jest.fn((table: string) => {
   if (table === 'custom_relationship_types') return customTypesTable;
+  if (table === 'networks' || table === 'networks_with_counts') return networksTable;
   return {
     select: () => ({
       eq: () => ({
@@ -123,7 +204,7 @@ const from = jest.fn((table: string) => {
   };
 });
 
-export const supabase = { auth, from };
+export const supabase = { auth, from, rpc };
 
 /** Test controls for the fake backend. */
 export const fakeSupabase = {
@@ -137,6 +218,11 @@ export const fakeSupabase = {
     customTypes.rows = [];
     customTypes.error = null;
     customTypes.nextId = 1;
+    networks.rows = [];
+    networks.onlyPeople = {};
+    networks.error = null;
+    networks.nextId = 1;
+    rpc.mockClear();
     auth.onAuthStateChange.mockClear();
     auth.signInWithPassword.mockClear();
     auth.signOut.mockClear();
@@ -167,6 +253,22 @@ export const fakeSupabase = {
   },
   setCustomRelationshipTypesError(error: Error | null) {
     customTypes.error = error;
+  },
+  /** Seed networks; `onlyPeople` is how many people deleting it would also delete. */
+  setNetworks(rows: (Partial<NetworkRow> & { id: string; name: string; onlyPeople?: number })[]) {
+    networks.rows = rows.map((r) => ({
+      type: 'custom',
+      color: 'blue',
+      description: null,
+      ...r,
+    }));
+    networks.onlyPeople = Object.fromEntries(rows.map((r) => [r.id, r.onlyPeople ?? 0]));
+  },
+  getNetworks() {
+    return networks.rows.map(networkColumns);
+  },
+  setNetworksError(error: Error | null) {
+    networks.error = error;
   },
   /** Pretend a stored session exists, so INITIAL_SESSION delivers it. */
   setStoredSession(signedIn: boolean) {
