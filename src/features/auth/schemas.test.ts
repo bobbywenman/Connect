@@ -1,4 +1,4 @@
-import { loginSchema, signUpSchema } from './schemas';
+import { forgotPasswordSchema, loginSchema, resetPasswordSchema, signUpSchema } from './schemas';
 
 const valid = {
   name: 'Ada',
@@ -65,6 +65,44 @@ describe('loginSchema', () => {
     expect(r.success).toBe(false);
     if (!r.success) {
       expect(r.error.issues.map((i) => i.path[0]).sort()).toEqual(['email', 'password']);
+    }
+  });
+});
+
+describe('forgotPasswordSchema', () => {
+  it('accepts and trims a valid email', () => {
+    const r = forgotPasswordSchema.safeParse({ email: ' a@b.co ' });
+    expect(r.success && r.data.email).toBe('a@b.co');
+  });
+
+  it('rejects empty and malformed emails with friendly messages', () => {
+    const empty = forgotPasswordSchema.safeParse({ email: '' });
+    expect(!empty.success && empty.error.issues[0]?.message).toBe('Enter your email address');
+    const bad = forgotPasswordSchema.safeParse({ email: 'nope' });
+    expect(!bad.success && bad.error.issues[0]?.message).toBe('Enter a valid email address');
+  });
+});
+
+describe('resetPasswordSchema', () => {
+  it('accepts matching passwords of at least 8 characters', () => {
+    expect(
+      resetPasswordSchema.safeParse({ password: 'abcdefgh', confirmPassword: 'abcdefgh' }).success,
+    ).toBe(true);
+  });
+
+  it('rejects short passwords', () => {
+    const r = resetPasswordSchema.safeParse({ password: 'short', confirmPassword: 'short' });
+    expect(!r.success && r.error.issues[0]?.message).toBe('Use at least 8 characters');
+  });
+
+  it('rejects mismatched confirmation on the confirm field', () => {
+    const r = resetPasswordSchema.safeParse({ password: 'abcdefgh', confirmPassword: 'abcdefgi' });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues[0]).toMatchObject({
+        path: ['confirmPassword'],
+        message: 'Passwords do not match',
+      });
     }
   });
 });

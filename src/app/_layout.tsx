@@ -12,9 +12,10 @@ import { initSession, useSession } from '@/store/session';
 function useAuthGate() {
   const status = useSession((s) => s.status);
   const onboardingComplete = useSession((s) => s.onboardingComplete);
+  const recovery = useSession((s) => s.recovery);
   const segments = useSegments();
   const router = useRouter();
-  const target = getGateRedirect({ status, onboardingComplete }, segments);
+  const target = getGateRedirect({ status, onboardingComplete, recovery }, segments);
 
   useEffect(() => {
     if (target) router.replace(target as never);

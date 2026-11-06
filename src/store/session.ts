@@ -11,6 +11,9 @@ export interface SessionState {
   userId: string | null;
   /** From `profiles.onboarding_complete`; read after sign-in. */
   onboardingComplete: boolean;
+  /** True from a password-recovery link until the new password is saved; the gate pins the user to /reset-password. */
+  recovery: boolean;
+  setRecovery: (value: boolean) => void;
   setOnboardingComplete: (value: boolean) => void;
 }
 
@@ -19,11 +22,13 @@ const initialState = {
   session: null,
   userId: null,
   onboardingComplete: false,
+  recovery: false,
 } as const satisfies Partial<SessionState>;
 
 export const useSession = create<SessionState>()((set) => ({
   ...initialState,
   setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
+  setRecovery: (recovery) => set({ recovery }),
 }));
 
 /** Test helper: put the store back to its initial (loading) state. */
@@ -52,13 +57,20 @@ export function initSession(): () => void {
     set({ status: 'signedIn', onboardingComplete });
   }
 
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
     if (!session) {
       profileUserId = null;
-      set({ status: 'signedOut', session: null, userId: null, onboardingComplete: false });
+      set({
+        status: 'signedOut',
+        session: null,
+        userId: null,
+        onboardingComplete: false,
+        recovery: false,
+      });
       return;
     }
     set({ session, userId: session.user.id });
+    if (event === 'PASSWORD_RECOVERY') set({ recovery: true });
     if (profileUserId !== session.user.id) {
       profileUserId = session.user.id;
       // Never await Supabase calls inside this callback (it can deadlock auth): defer.

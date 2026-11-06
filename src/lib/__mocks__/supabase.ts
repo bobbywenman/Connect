@@ -68,6 +68,34 @@ const auth = {
       return { data: { session, user: session.user }, error: null };
     },
   ),
+  resetPasswordForEmail: jest.fn(async (_email: string, _options?: { redirectTo?: string }) => {
+    // Like the real backend: no error for unknown emails.
+    return { data: {}, error: fake.authError };
+  }),
+  exchangeCodeForSession: jest.fn(async (_code: string) => {
+    if (fake.authError) return { data: { session: null, user: null }, error: fake.authError };
+    const session = makeSession();
+    emit('PASSWORD_RECOVERY', session);
+    return { data: { session, user: session.user }, error: null };
+  }),
+  verifyOtp: jest.fn(async (_params: { token_hash: string; type: string }) => {
+    if (fake.authError) return { data: { session: null, user: null }, error: fake.authError };
+    const session = makeSession();
+    emit('PASSWORD_RECOVERY', session);
+    return { data: { session, user: session.user }, error: null };
+  }),
+  setSession: jest.fn(async (_tokens: { access_token: string; refresh_token: string }) => {
+    if (fake.authError) return { data: { session: null, user: null }, error: fake.authError };
+    const session = makeSession();
+    emit('SIGNED_IN', session);
+    return { data: { session, user: session.user }, error: null };
+  }),
+  updateUser: jest.fn(async (_attributes: { password?: string }) => {
+    if (fake.authError) return { data: { user: null }, error: fake.authError };
+    const session = makeSession();
+    emit('USER_UPDATED', session);
+    return { data: { user: session.user }, error: null };
+  }),
   signOut: jest.fn(async () => {
     if (fake.authError) return { error: fake.authError };
     emit('SIGNED_OUT', null);
@@ -171,6 +199,11 @@ export const fakeSupabase = {
     auth.signInWithPassword.mockClear();
     auth.signUp.mockClear();
     auth.signOut.mockClear();
+    auth.resetPasswordForEmail.mockClear();
+    auth.exchangeCodeForSession.mockClear();
+    auth.verifyOtp.mockClear();
+    auth.setSession.mockClear();
+    auth.updateUser.mockClear();
     from.mockClear();
   },
   setProfile(profile: { onboarding_complete: boolean } | null) {
@@ -204,6 +237,19 @@ export const fakeSupabase = {
   },
   signUpCalls() {
     return auth.signUp.mock.calls.map(([args]) => args);
+  },
+  resetCalls() {
+    return auth.resetPasswordForEmail.mock.calls.map(([email, options]) => ({ email, ...options }));
+  },
+  recoveryCalls() {
+    return {
+      exchange: auth.exchangeCodeForSession.mock.calls.map(([code]) => code),
+      verifyOtp: auth.verifyOtp.mock.calls.map(([params]) => params),
+      setSession: auth.setSession.mock.calls.map(([tokens]) => tokens),
+    };
+  },
+  updateUserCalls() {
+    return auth.updateUser.mock.calls.map(([attributes]) => attributes);
   },
   setAuthError(error: unknown) {
     fake.authError = error;

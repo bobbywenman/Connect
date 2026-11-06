@@ -5,6 +5,7 @@ export const authMessages = {
   weakPassword: 'That password is too weak. Use at least 8 characters and mix letters and numbers.',
   network: 'Could not reach the server. Check your internet connection and try again.',
   emailNotConfirmed: 'Please confirm your email first. Check your inbox for the confirmation link.',
+  samePassword: 'Choose a password you have not used before.',
   rateLimited: 'Too many attempts. Please wait a moment and try again.',
   fallback: 'Something went wrong. Please try again.',
 } as const;
@@ -36,6 +37,9 @@ export function mapAuthError(error: unknown): string {
   }
   if (code === 'weak_password' || message.includes('password should be')) {
     return authMessages.weakPassword;
+  }
+  if (code === 'same_password' || message.includes('different from the old password')) {
+    return authMessages.samePassword;
   }
   if (code === 'email_not_confirmed' || message.includes('email not confirmed')) {
     return authMessages.emailNotConfirmed;

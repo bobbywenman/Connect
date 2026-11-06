@@ -119,4 +119,15 @@ describe('session store', () => {
     useSession.getState().setOnboardingComplete(true);
     expect(useSession.getState().onboardingComplete).toBe(true);
   });
+
+  it('sets the recovery flag on PASSWORD_RECOVERY and clears it on sign-out', async () => {
+    unsubscribe = initSession();
+    await waitFor(() => expect(useSession.getState().status).toBe('signedOut'));
+    expect(useSession.getState().recovery).toBe(false);
+    act(() => fakeSupabase.emit('PASSWORD_RECOVERY', fakeSupabase.makeSession()));
+    expect(useSession.getState().recovery).toBe(true);
+    await waitFor(() => expect(useSession.getState().status).toBe('signedIn'));
+    act(() => fakeSupabase.emit('SIGNED_OUT', null));
+    expect(useSession.getState().recovery).toBe(false);
+  });
 });

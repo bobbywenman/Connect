@@ -21,7 +21,10 @@ export const supabase = createClient<Database>(url, publishableKey, {
     storage: sessionStorage,
     persistSession: true,
     autoRefreshToken: true,
-    // No OAuth redirect parsing from the URL; native deep links are handled in KT-08/09.
+    // PKCE is the recommended flow for native apps: reset links carry a one-time `?code=`
+    // exchanged with the verifier stored on this device (see features/auth/recoveryLink.ts).
+    flowType: 'pkce',
+    // Deep links are parsed by the app itself (reset-password screen), not by the client.
     detectSessionInUrl: false,
   },
 });

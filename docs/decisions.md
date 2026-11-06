@@ -81,3 +81,9 @@ The PRD lists both "tags" and "groups" on a person with no difference in behavio
 **Decided:** 2026-11-06 by engineering
 
 The tickets stored local notification IDs on the person record. Those IDs only mean something on the device that scheduled them, so they are kept in device storage. The app re-syncs all reminders on launch. The database only stores whether a reminder is on.
+
+## D-11 · Password reset uses PKCE and a gate-exempt reset screen
+
+**Decided:** 2026-11-06 by engineering (KT-08)
+
+The Supabase client uses the PKCE flow, so reset emails land on `<redirectTo>?code=...` and the app exchanges the code on the device that asked for the reset. `src/features/auth/recoveryLink.ts` also accepts `token_hash` and implicit-token links. The `(auth)/reset-password` route is exempt from the auth gate's redirects (so a cold-start deep link is not bounced before it is processed), and the session store has a `recovery` flag that pins a recovery session to that screen until the new password is saved. The forgot-password screen always shows the same confirmation so it never reveals which emails have accounts.

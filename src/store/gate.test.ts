@@ -1,9 +1,10 @@
 import { getGateRedirect } from './gate';
 
-const loading = { status: 'loading', onboardingComplete: false } as const;
-const out = { status: 'signedOut', onboardingComplete: true } as const;
-const fresh = { status: 'signedIn', onboardingComplete: false } as const;
-const done = { status: 'signedIn', onboardingComplete: true } as const;
+const loading = { status: 'loading', onboardingComplete: false, recovery: false } as const;
+const out = { status: 'signedOut', onboardingComplete: true, recovery: false } as const;
+const fresh = { status: 'signedIn', onboardingComplete: false, recovery: false } as const;
+const done = { status: 'signedIn', onboardingComplete: true, recovery: false } as const;
+const recovering = { status: 'signedIn', onboardingComplete: true, recovery: true } as const;
 
 describe('getGateRedirect', () => {
   it('never redirects while the session is loading', () => {
@@ -29,5 +30,16 @@ describe('getGateRedirect', () => {
     expect(getGateRedirect(done, ['(auth)', 'login'])).toBe('/networks');
     expect(getGateRedirect(done, ['(app)', '(tabs)', 'search'])).toBeNull();
     expect(getGateRedirect(done, ['(app)', 'onboarding'])).toBeNull();
+  });
+  it('keeps the reset screen reachable while loading and for any session (cold-start deep link)', () => {
+    expect(getGateRedirect(loading, ['(auth)', 'reset-password'])).toBeNull();
+    expect(getGateRedirect(out, ['(auth)', 'reset-password'])).toBeNull();
+    expect(getGateRedirect(done, ['(auth)', 'reset-password'])).toBeNull();
+    expect(getGateRedirect(fresh, ['(auth)', 'reset-password'])).toBeNull();
+  });
+  it('pins a recovery session to the reset screen until the password is saved', () => {
+    expect(getGateRedirect(recovering, ['(auth)', 'reset-password'])).toBeNull();
+    expect(getGateRedirect(recovering, ['(auth)', 'login'])).toBe('/reset-password');
+    expect(getGateRedirect(recovering, ['(app)', '(tabs)', 'networks'])).toBe('/reset-password');
   });
 });
