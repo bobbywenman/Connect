@@ -60,7 +60,7 @@ persons             id, owner_id, is_self, first_name, last_name, preferred_name
                     import_source (manual|contacts|linkedin), external_ids jsonb, archived_at
 network_members     network_id, person_id, owner_id, added_at              (PK: network_id, person_id)
 relationships       id, owner_id, source_person_id, target_person_id, type, inverse_type,
-                    custom_label, notes                                    (unique: source, target, type)
+                    custom_label, inverse_custom_label, notes                                    (unique: source, target, type)
 custom_relationship_types  id, owner_id, label, inverse_label             (unique per owner: lower(label))
 events              id, owner_id, network_id (nullable), name, event_date, location, description
 event_persons       event_id, person_id, owner_id                          (PK: event_id, person_id)
