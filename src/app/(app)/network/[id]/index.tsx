@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, minTapTarget } from '@/constants';
 import { useNetwork } from '@/features/networks/hooks';
@@ -22,6 +22,18 @@ export default function NetworkScreen() {
           headerRight: () => (
             <View style={styles.headerActions}>
               <StudyHeaderButton networkId={id} />
+              {Platform.OS === 'web' ? null : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Import from contacts"
+                  onPress={() =>
+                    router.push({ pathname: '/import/contacts', params: { networkId: id } })
+                  }
+                  style={styles.headerButton}
+                >
+                  <Ionicons name="download-outline" size={24} color={colors.primary} />
+                </Pressable>
+              )}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Edit network"

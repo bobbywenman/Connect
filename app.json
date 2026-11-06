@@ -18,6 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "blockedPermissions": ["android.permission.WRITE_CONTACTS"],
       "package": "com.bobbywenman.knowthem"
     },
     "web": {
@@ -37,6 +38,12 @@
           "photosPermission": "KnowThem uses your photos so you can add a picture of someone you know.",
           "cameraPermission": "KnowThem uses your camera so you can take a picture of someone you know.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "KnowThem reads your contacts so you can choose who to add. Nothing leaves your phone until you tap Import."
         }
       ]
     ],

@@ -34,6 +34,8 @@ export const queryKeys = {
     all: ['events'] as const,
     detail: (id: string) => ['events', id] as const,
   },
+  /** Source ids already imported from 'contacts' or 'linkedin'; under 'persons' so it refreshes with them. */
+  importedIds: (source: string) => ['persons', 'importedIds', source] as const,
   duplicates: {
     people: ['persons', 'duplicateCheck'] as const,
     dismissals: ['duplicates', 'dismissals'] as const,

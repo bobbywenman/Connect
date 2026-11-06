@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Button, Chip, EmptyState } from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, radii, spacing } from '@/constants';
@@ -147,6 +147,13 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
           ctaLabel="Add person"
           onCtaPress={addPerson}
         />
+        {Platform.OS === 'web' ? null : (
+          <Button
+            label="Import from contacts"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/import/contacts', params: { networkId } })}
+          />
+        )}
         <ArchivedToggle value={showArchived} onChange={setShowArchived} />
       </View>
     );

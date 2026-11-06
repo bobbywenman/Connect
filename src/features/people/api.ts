@@ -22,6 +22,12 @@ export interface PersonWithNetworks extends Person {
   networkIds: string[];
 }
 
+/** Provenance recorded on imported people. */
+export interface PersonSource {
+  importSource: 'contacts' | 'linkedin';
+  externalIds: Record<string, string>;
+}
+
 /** Person columns the form edits; `networkIds` is handled separately. */
 export type PersonFields = Omit<PersonFormValues, 'networkIds'>;
 
@@ -76,12 +82,20 @@ export async function getPerson(id: string): Promise<PersonWithNetworks | null> 
  * the person is deleted again so nothing is left half-saved, and the original error
  * is thrown.
  */
-export async function createPerson(fields: PersonFields, networkIds: string[]): Promise<Person> {
-  const { data: person, error } = await supabase
-    .from('persons')
-    .insert(toPersonRow(fields))
-    .select('*')
-    .single();
+export async function createPerson(
+  fields: PersonFields,
+  networkIds: string[],
+  /** Where the person came from (imports, KT-31/32); omitted for manually added people. */
+  source?: PersonSource,
+): Promise<Person> {
+  const row: PersonInsert = source
+    ? {
+        ...toPersonRow(fields),
+        import_source: source.importSource,
+        external_ids: source.externalIds,
+      }
+    : toPersonRow(fields);
+  const { data: person, error } = await supabase.from('persons').insert(row).select('*').single();
   if (error) throw error;
 
   if (networkIds.length > 0) {
