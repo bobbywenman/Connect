@@ -1,5 +1,3 @@
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { SearchScreen } from '@/features/search/components/SearchScreen';
 
-export default function SearchScreen() {
-  return <ScreenPlaceholder title="Search" />;
-}
+export default SearchScreen;
