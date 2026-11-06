@@ -199,6 +199,18 @@ export function sentence(
   return `${viewer} is ${other} ${lowerFirst(labelFor(view))}`;
 }
 
+/** e.g. "Sarah is already Maria's cousin.", for blocking a duplicate. */
+export function duplicateSentence(
+  relationship: RelationshipRow,
+  viewerPersonId: string,
+  names: NameLookup,
+): string {
+  const view = describeFrom(relationship, viewerPersonId);
+  const viewer = displayName(names(viewerPersonId));
+  const other = possessive(displayName(names(view.otherPersonId)));
+  return `${viewer} is already ${other} ${lowerFirst(labelFor(view))}.`;
+}
+
 /**
  * e.g. "Your cousin": what the other person is to the self person.
  * Returns null when the self person is not part of the relationship.
