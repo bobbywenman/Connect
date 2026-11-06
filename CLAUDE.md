@@ -51,7 +51,7 @@ npx supabase test db
 ## Secrets
 
 - Never commit `.env`, the Supabase service role key, or the database password.
-- The anon key and project URL (`https://mpbmcgyknbpriwhanait.supabase.co`) are public by design.
+- The publishable key (`sb_publishable_...`, replaces the legacy anon key) and project URL (`https://mpbmcgyknbpriwhanait.supabase.co`) are public by design.
 - If a task needs a secret, ask the user to add it to the environment settings. Never ask them to paste it in chat.
 
 ## Verifying in cloud sessions

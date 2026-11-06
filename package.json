@@ -24,9 +24,9 @@
       "^@/(.*)$": "<rootDir>/src/$1"
     },
     "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/supabase/",
-      "/.claude/"
+      "<rootDir>/node_modules/",
+      "<rootDir>/supabase/",
+      "<rootDir>/.claude/"
     ],
     "modulePathIgnorePatterns": [
       "<rootDir>/.claude/"
