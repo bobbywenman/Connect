@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
-import { sessionActions } from '@/store/session';
+import { useCompleteOnboarding } from '@/features/profile/hooks';
 
 export default function OnboardingScreen() {
+  const completeOnboarding = useCompleteOnboarding();
   return (
     <ScreenPlaceholder title="Onboarding">
       {/* TEMPORARY: stands in for finishing onboarding until the real flow lands. */}
@@ -11,7 +12,7 @@ export default function OnboardingScreen() {
         accessibilityRole="button"
         accessibilityLabel="Finish onboarding (dev)"
         style={styles.button}
-        onPress={() => sessionActions.completeOnboarding()}
+        onPress={() => completeOnboarding.mutate()}
       >
         <Text style={styles.buttonText}>Finish onboarding (dev)</Text>
       </Pressable>

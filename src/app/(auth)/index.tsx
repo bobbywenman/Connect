@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BrandTitle } from '@/components';
-import { sessionActions } from '@/store/session';
+import { supabase } from '@/lib/supabase';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -27,14 +27,22 @@ export default function WelcomeScreen() {
           <Text style={styles.buttonText}>Sign up</Text>
         </Pressable>
         {/* TEMPORARY: dev shortcut, removed when real sign-in lands in KT-07. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Continue (dev sign-in)"
-          style={styles.button}
-          onPress={() => sessionActions.signIn({ onboardingComplete: true })}
-        >
-          <Text style={styles.buttonText}>Continue (dev sign-in)</Text>
-        </Pressable>
+        {__DEV__ ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Continue (dev sign-in)"
+            style={styles.button}
+            onPress={() => {
+              // Seeded local demo user (supabase/seed.sql). Auth state flows into the session store.
+              void supabase.auth.signInWithPassword({
+                email: 'demo@knowthem.app',
+                password: 'password123',
+              });
+            }}
+          >
+            <Text style={styles.buttonText}>Continue (dev sign-in)</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

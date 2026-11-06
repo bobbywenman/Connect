@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
-import { sessionActions } from '@/store/session';
+import { supabase } from '@/lib/supabase';
 
 export default function SettingsScreen() {
   return (
@@ -11,7 +11,7 @@ export default function SettingsScreen() {
         accessibilityRole="button"
         accessibilityLabel="Sign out (dev)"
         style={styles.button}
-        onPress={() => sessionActions.signOut()}
+        onPress={() => void supabase.auth.signOut()}
       >
         <Text style={styles.buttonText}>Sign out (dev)</Text>
       </Pressable>

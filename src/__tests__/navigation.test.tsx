@@ -1,6 +1,7 @@
 import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library';
 
-import { sessionActions } from '@/store/session';
+import { fakeSupabase } from '@/test-utils/fakeSupabase';
+import { resetSession } from '@/store/session';
 
 const APP_DIR = 'src/app';
 
@@ -10,11 +11,13 @@ async function renderAt(url: string) {
 
 describe('navigation shell', () => {
   beforeEach(() => {
-    sessionActions.reset();
+    fakeSupabase.reset();
+    resetSession();
   });
 
   it('shows the welcome screen when signed out', async () => {
     const r = await renderAt('/');
+    await waitFor(() => expect(screen.getByLabelText('Continue (dev sign-in)')).toBeTruthy());
     expect(screen.getByLabelText('Continue (dev sign-in)')).toBeTruthy();
     expect(r.getPathname()).toBe('/');
   });
@@ -26,6 +29,7 @@ describe('navigation shell', () => {
 
   it('dev sign-in lands on the Networks tab and sign out returns to welcome', async () => {
     const r = await renderAt('/');
+    await waitFor(() => expect(screen.getByLabelText('Continue (dev sign-in)')).toBeTruthy());
     await act(async () => {
       fireEvent.press(screen.getByLabelText('Continue (dev sign-in)'));
     });
@@ -44,7 +48,8 @@ describe('navigation shell', () => {
   });
 
   it('sends signed-in users without onboarding to onboarding', async () => {
-    sessionActions.signIn({ onboardingComplete: false });
+    fakeSupabase.setStoredSession(true);
+    fakeSupabase.setProfile({ onboarding_complete: false });
     const r = await renderAt('/networks');
     await waitFor(() => expect(r.getPathname()).toBe('/onboarding'));
     await act(async () => {
@@ -52,11 +57,12 @@ describe('navigation shell', () => {
     });
     // Completing onboarding does not move the user; they can now navigate freely.
     expect(r.getPathname()).toBe('/onboarding');
+    expect(fakeSupabase.getProfile()).toEqual({ onboarding_complete: true });
   });
 
   describe('signed in', () => {
     beforeEach(() => {
-      sessionActions.signIn({ onboardingComplete: true });
+      fakeSupabase.setStoredSession(true);
     });
 
     const cases: [string, string, string][] = [
@@ -83,15 +89,16 @@ describe('navigation shell', () => {
         await waitFor(() => expect(r.getPathname()).toBe(title));
         return;
       }
+      // The app shows a blank splash until the stored session has been read.
+      await waitFor(() => expect(screen.getAllByText(title).length).toBeGreaterThan(0));
       expect(r.getPathname()).toBe(url);
-      expect(screen.getAllByText(title).length).toBeGreaterThan(0);
     });
 
     it('resolves the knowthem:// deep link to the person route', async () => {
       const r = await renderAt('/person/123');
+      await waitFor(() => expect(screen.getAllByText('Person 123').length).toBeGreaterThan(0));
       expect(r.getPathname()).toBe('/person/123');
       expect(r.getSegments()).toEqual(['(app)', 'person', '[id]']);
-      expect(screen.getAllByText('Person 123').length).toBeGreaterThan(0);
     });
   });
 });

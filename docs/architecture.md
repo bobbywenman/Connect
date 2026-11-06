@@ -34,8 +34,8 @@ src/
       hooks.ts      TanStack Query hooks wrapping api.ts
       components/   Feature-specific UI
       *.test.ts     Tests next to the code
-  lib/            Supabase client, query client, query keys, shared utilities
-  store/          Client state. Currently a session stub (session.ts) and the pure auth-gate rule (gate.ts); KT-06 replaces the stub
+  lib/            supabase.ts (typed client), secureStorage.ts (chunked session storage), queryClient.ts, queryKeys.ts
+  store/          Client state. Zustand stores: session.ts (mirrors Supabase auth), uiPrefs.ts, and the pure auth-gate rule (gate.ts)
   constants/      Design tokens
   types/          database.ts (generated) and shared types
 supabase/
@@ -89,6 +89,15 @@ Key rules:
 | Hosted      | Project `mpbmcgyknbpriwhanait` | Device testing, TestFlight, production (a separate production project may be created before launch) |
 
 App config comes from `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`) in `.env` (never committed). The publishable key is safe to ship in the app. The **secret / service role key must never** be in the app or the repo.
+
+## Data layer
+
+- **Client:** `src/lib/supabase.ts` creates the typed client (`createClient<Database>`) from `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and throws a clear error at startup if either is missing. Auto token refresh starts and stops with the app's foreground/background state (native only).
+- **Session persistence:** `src/lib/secureStorage.ts` stores the auth session in expo-secure-store on native, split into 500-character chunks (`key.0..n` plus `key.count`) because SecureStore values are limited to about 2KB; stale chunks are removed on overwrite and remove. On web it uses `localStorage`.
+- **Server state:** TanStack Query (`src/lib/queryClient.ts`: 30s stale time, one retry for queries, none for mutations; app foreground counts as focus). Keys are built from `src/lib/queryKeys.ts`. Online status is not wired yet because no netinfo package is installed.
+- **Client state:** `src/store/session.ts` (`status: loading | signedOut | signedIn`, `session`, `userId`, `onboardingComplete`) subscribes to `supabase.auth.onAuthStateChange` via `initSession()` (called once in the root layout) and reads `profiles.onboarding_complete` after sign-in. `getGateRedirect` (`gate.ts`) never redirects while `loading`; the root layout shows a blank screen until then.
+- **Feature pattern:** `src/features/<feature>/api.ts` (plain async Supabase calls, throw on error) and `hooks.ts` (useQuery / useMutation). See `src/features/profile/` for the example.
+- **Tests:** `jest.setup.ts` mocks `@/lib/supabase` with `src/lib/__mocks__/supabase.ts` so unit tests never hit the network; control it with `fakeSupabase` from `@/test-utils/fakeSupabase`.
 
 ## How we verify work
 
