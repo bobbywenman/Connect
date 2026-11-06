@@ -58,12 +58,10 @@ export async function saveCustomRelationshipType(
   );
   if (samePair) return samePair;
 
+  // Saving to the label list is a convenience, so never block the user: if the
+  // label is already saved with a different inverse, keep the saved entry.
   const sameLabel = existing.find((row) => row.label.toLowerCase() === labelKey);
-  if (sameLabel) {
-    throw new Error(
-      `You already have a custom relationship called "${sameLabel.label}" with inverse "${sameLabel.inverse_label}".`,
-    );
-  }
+  if (sameLabel) return sameLabel;
 
   const { data, error } = await supabase
     .from('custom_relationship_types')

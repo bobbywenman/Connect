@@ -60,12 +60,12 @@ describe('custom relationship types api', () => {
       expect(fakeSupabase.getCustomRelationshipTypes()).toHaveLength(1);
     });
 
-    it('rejects a label already saved with a different inverse', async () => {
+    it('keeps the saved entry when a label is reused with a different inverse', async () => {
       fakeSupabase.setCustomRelationshipTypes([{ label: 'Landlord', inverse_label: 'Tenant' }]);
 
-      await expect(
-        saveCustomRelationshipType({ label: 'Landlord', inverseLabel: 'Renter' }),
-      ).rejects.toThrow('You already have a custom relationship called "Landlord"');
+      const row = await saveCustomRelationshipType({ label: 'Landlord', inverseLabel: 'Renter' });
+
+      expect(row).toMatchObject({ label: 'Landlord', inverse_label: 'Tenant' });
       expect(fakeSupabase.getCustomRelationshipTypes()).toHaveLength(1);
     });
 
