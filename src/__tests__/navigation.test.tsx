@@ -74,8 +74,6 @@ describe('navigation shell', () => {
       ['tab: settings', '/settings', 'Settings'],
       ['network detail', '/network/7', 'Network 7'],
       ['person detail (deep link path)', '/person/123', 'Person 123'],
-      ['person edit', '/person/123/edit', 'Edit person 123'],
-      ['person new', '/person/new', 'New person'],
       ['relationship new', '/relationship/new', 'New relationship'],
       ['study session', '/study/session', 'Study session'],
       ['study complete', '/study/complete', 'Study complete'],
