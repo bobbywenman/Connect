@@ -81,7 +81,7 @@ describe('navigation shell', () => {
       ['relationship new', '/relationship/new', 'New relationship'],
       ['study session', '/study/session', 'Study session'],
       ['study complete', '/study/complete', 'Study complete'],
-      ['event detail', '/event/9', 'Event 9'],
+      ['event detail', '/event/9', 'Loading…'],
       ['onboarding', '/onboarding', 'Onboarding'],
     ];
 
