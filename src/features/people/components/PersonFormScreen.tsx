@@ -104,7 +104,7 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
 
   return (
     <PersonForm
-      title="Edit person"
+      title={isSelf ? 'My profile' : 'Edit person'}
       initialValues={personToFormInput(person.data)}
       networks={networks.data}
       isSelf={isSelf}

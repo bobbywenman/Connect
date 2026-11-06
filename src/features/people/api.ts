@@ -44,6 +44,18 @@ export function toPersonRow(fields: PersonFields): PersonInsert {
   };
 }
 
+/** The signed-in user's self person ("You", D-2), or null if the signup trigger has not run yet. */
+export async function getSelfPerson(userId: string): Promise<Person | null> {
+  const { data, error } = await supabase
+    .from('persons')
+    .select('*')
+    .eq('owner_id', userId)
+    .eq('is_self', true)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function getPerson(id: string): Promise<PersonWithNetworks | null> {
   const { data, error } = await supabase
     .from('persons')

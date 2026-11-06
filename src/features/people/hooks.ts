@@ -1,14 +1,25 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/queryKeys';
+import { useSession } from '@/store/session';
 
-import { createPerson, getPerson, updatePerson, type PersonFields } from './api';
+import { createPerson, getPerson, getSelfPerson, updatePerson, type PersonFields } from './api';
 
 export function usePerson(id: string | undefined) {
   return useQuery({
     queryKey: queryKeys.person.detail(id ?? ''),
     queryFn: () => getPerson(id as string),
     enabled: !!id,
+  });
+}
+
+/** The signed-in user's self person ("You", D-2). */
+export function useSelfPerson() {
+  const userId = useSession((s) => s.userId);
+  return useQuery({
+    queryKey: queryKeys.person.self,
+    queryFn: () => getSelfPerson(userId as string),
+    enabled: userId !== null,
   });
 }
 
@@ -19,6 +30,8 @@ async function invalidatePeople(queryClient: QueryClient, personId: string) {
     // Prefix match: refreshes the person list of every network.
     queryClient.invalidateQueries({ queryKey: ['persons'] }),
     queryClient.invalidateQueries({ queryKey: queryKeys.person.detail(personId) }),
+    // The self person has its own key (KT-11), so refresh it as well.
+    queryClient.invalidateQueries({ queryKey: queryKeys.person.self }),
   ]);
 }
 

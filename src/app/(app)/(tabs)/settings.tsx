@@ -1,16 +1,19 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Button } from '@/components';
+import { Button, Screen } from '@/components';
 import { spacing } from '@/constants';
 import { mapAuthError } from '@/features/auth/errors';
 import { FormError } from '@/features/auth/FormError';
 import { useSignOut } from '@/features/auth/hooks';
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { MyProfileRow } from '@/features/profile/components/MyProfileRow';
 
 export default function SettingsScreen() {
   const signOut = useSignOut();
   return (
-    <ScreenPlaceholder title="Settings">
+    <Screen scroll edges={['bottom', 'left', 'right']}>
+      <View style={styles.section}>
+        <MyProfileRow />
+      </View>
       <View style={styles.actions}>
         {/* Signing out clears the session; the route gate then returns to welcome. */}
         <Button
@@ -21,10 +24,11 @@ export default function SettingsScreen() {
         />
         <FormError message={signOut.error ? mapAuthError(signOut.error) : null} />
       </View>
-    </ScreenPlaceholder>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  section: { marginBottom: spacing.lg },
   actions: { alignSelf: 'stretch', gap: spacing.sm },
 });
