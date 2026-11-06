@@ -1,0 +1,21 @@
+import { Stack } from 'expo-router';
+
+export default function AppLayout() {
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="network/[id]" options={{ title: 'Network' }} />
+      <Stack.Screen name="person/[id]/index" options={{ title: 'Person' }} />
+      <Stack.Screen name="person/[id]/edit" options={{ title: 'Edit person' }} />
+      <Stack.Screen name="person/new" options={{ title: 'New person' }} />
+      <Stack.Screen
+        name="relationship/new"
+        options={{ title: 'New relationship', presentation: 'modal' }}
+      />
+      <Stack.Screen name="study/session" options={{ title: 'Study session' }} />
+      <Stack.Screen name="study/complete" options={{ title: 'Study complete' }} />
+      <Stack.Screen name="event/[id]" options={{ title: 'Event' }} />
+      <Stack.Screen name="onboarding" options={{ title: 'Welcome', headerShown: false }} />
+    </Stack>
+  );
+}
