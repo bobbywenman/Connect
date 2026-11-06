@@ -1,7 +1,14 @@
 import { createFakePeople } from '@/test-utils/fakePeople';
 import { fakeSupabase } from '@/test-utils/fakeSupabase';
 
-import { createPerson, getPerson, toPersonRow, updatePerson, type PersonFields } from './api';
+import {
+  createPerson,
+  getPerson,
+  getSelfPerson,
+  toPersonRow,
+  updatePerson,
+  type PersonFields,
+} from './api';
 import { createPersonFormSchema, emptyPersonForm } from './schemas';
 
 const schema = createPersonFormSchema();
@@ -77,6 +84,40 @@ describe('getPerson', () => {
 
   it('returns null when there is no such person', async () => {
     await expect(getPerson('missing')).resolves.toBeNull();
+  });
+});
+
+describe('getSelfPerson', () => {
+  const USER = fakeSupabase.DEMO_USER_ID;
+
+  it('returns the is_self person of the given user, not their other people', async () => {
+    people.seedPerson({ first_name: 'Ana' }, ['n1']);
+    const selfId = people.seedPerson({ first_name: 'Alex', last_name: 'Wenman', is_self: true });
+
+    const self = await getSelfPerson(USER);
+
+    expect(self).toMatchObject({
+      id: selfId,
+      first_name: 'Alex',
+      last_name: 'Wenman',
+      is_self: true,
+    });
+  });
+
+  it('returns null when the user has no self person', async () => {
+    people.seedPerson({ first_name: 'Ana' });
+    await expect(getSelfPerson(USER)).resolves.toBeNull();
+  });
+
+  it('returns null for the self person of a different user', async () => {
+    people.seedPerson({ first_name: 'Someone', is_self: true, owner_id: 'other-user' });
+    await expect(getSelfPerson(USER)).resolves.toBeNull();
+  });
+
+  it('throws the query error', async () => {
+    const error = new Error('network down');
+    people.failOn('persons', 'select', error);
+    await expect(getSelfPerson(USER)).rejects.toBe(error);
   });
 });
 

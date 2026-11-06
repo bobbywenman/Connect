@@ -25,7 +25,7 @@ src/
     (auth)/       Welcome (index), login, sign-up, forgot-password
     (app)/        Signed-in area: Stack over tabs
       (tabs)/     networks (home), search, study, events, settings
-      network/[id], person/[id] (+ /edit), person/new, relationship/new (modal),
+      network/[id], person/[id] (+ /edit), person/new, relationship/new (modal), me (own profile),
       study/session, study/complete, event/[id], onboarding
   components/     Design-system components (Button, Avatar, ...). No data fetching.
   features/       One folder per domain: networks, people, relationships, study, events, import, notifications, auth
