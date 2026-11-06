@@ -1,6 +1,15 @@
 import { supabase } from '@/lib/supabase';
+import { createFakePeople } from '@/test-utils/fakePeople';
 
-import { createEvent, deleteEvent, getEvent, listEvents, updateEvent } from './api';
+import {
+  createEvent,
+  deleteEvent,
+  getEvent,
+  listAllPeopleForPicker,
+  listEvents,
+  setEventAttendees,
+  updateEvent,
+} from './api';
 
 const from = supabase.from as unknown as jest.Mock;
 
@@ -96,6 +105,7 @@ describe('events api', () => {
             last_name: null,
             preferred_name: null,
             photo_path: null,
+            updated_at: '2026-01-01T00:00:00Z',
             is_self: false,
           },
         },
@@ -106,6 +116,7 @@ describe('events api', () => {
             last_name: 'Adams',
             preferred_name: null,
             photo_path: null,
+            updated_at: '2026-01-01T00:00:00Z',
             is_self: false,
           },
         },
@@ -152,5 +163,78 @@ describe('events api', () => {
       delete: () => ({ eq: async () => ({ error: new Error('nope') }) }),
     });
     await expect(deleteEvent('e1')).rejects.toThrow('nope');
+  });
+});
+
+describe('attendee api', () => {
+  const fake = createFakePeople();
+  let uninstall: () => void;
+
+  const links = () =>
+    fake.tables
+      .event_persons!.map((r) => `${r.event_id as string}:${r.person_id as string}`)
+      .sort();
+
+  beforeEach(() => {
+    fake.tables.persons = [];
+    fake.tables.network_members = [];
+    fake.tables.event_persons = [];
+    fake.calls.length = 0;
+    uninstall = fake.install();
+  });
+  afterEach(() => uninstall());
+
+  it('listAllPeopleForPicker returns non-archived people with their network ids', async () => {
+    fake.seedPerson({ id: 'me', first_name: 'Rob', is_self: true });
+    fake.seedPerson({ id: 'a', first_name: 'Ann' }, ['n1', 'n2']);
+    fake.seedPerson({ id: 'old', first_name: 'Gone', archived_at: '2026-01-01' }, ['n1']);
+    const people = await listAllPeopleForPicker();
+    expect(people.map((p) => p.id).sort()).toEqual(['a', 'me']);
+    expect(people.find((p) => p.id === 'a')?.networkIds).toEqual(['n1', 'n2']);
+    expect(people.find((p) => p.id === 'me')?.networkIds).toEqual([]);
+    expect(people[0]).not.toHaveProperty('network_members');
+  });
+
+  it('listAllPeopleForPicker throws on error', async () => {
+    fake.failOn('persons', 'select', new Error('boom'));
+    await expect(listAllPeopleForPicker()).rejects.toThrow('boom');
+  });
+
+  it('setEventAttendees adds the new people and removes the dropped ones', async () => {
+    fake.tables.event_persons!.push(
+      { event_id: 'e1', person_id: 'a' },
+      { event_id: 'e1', person_id: 'b' },
+      { event_id: 'e2', person_id: 'z' },
+    );
+    await setEventAttendees('e1', ['b', 'c', 'd']);
+    // Other events are untouched.
+    expect(links()).toEqual(['e1:b', 'e1:c', 'e1:d', 'e2:z']);
+  });
+
+  it('setEventAttendees only writes the difference, and nothing when unchanged', async () => {
+    fake.tables.event_persons!.push({ event_id: 'e1', person_id: 'a' });
+    await setEventAttendees('e1', ['a']);
+    expect(fake.calls.map((c) => c.op)).toEqual(['select']);
+
+    fake.calls.length = 0;
+    await setEventAttendees('e1', ['a', 'b']);
+    expect(fake.calls.map((c) => c.op)).toEqual(['select', 'insert']);
+
+    fake.calls.length = 0;
+    await setEventAttendees('e1', []);
+    expect(fake.calls.map((c) => c.op)).toEqual(['select', 'delete']);
+    expect(links()).toEqual([]);
+  });
+
+  it('setEventAttendees converges when retried after a failed removal', async () => {
+    fake.tables.event_persons!.push({ event_id: 'e1', person_id: 'a' });
+    fake.failOn('event_persons', 'delete', new Error('flaky'));
+    await expect(setEventAttendees('e1', ['b'])).rejects.toThrow('flaky');
+    expect(links()).toEqual(['e1:a', 'e1:b']);
+  });
+
+  it('setEventAttendees throws when reading the current attendees fails', async () => {
+    fake.failOn('event_persons', 'select', new Error('nope'));
+    await expect(setEventAttendees('e1', ['a'])).rejects.toThrow('nope');
   });
 });

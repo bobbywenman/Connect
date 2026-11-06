@@ -27,6 +27,8 @@ export const queryKeys = {
   persons: {
     list: (filter: { networkId?: string; includeArchived?: boolean } = {}) =>
       ['persons', filter] as const,
+    /** Every non-archived person, for pickers. */
+    picker: ['persons', 'picker'] as const,
   },
   events: {
     all: ['events'] as const,

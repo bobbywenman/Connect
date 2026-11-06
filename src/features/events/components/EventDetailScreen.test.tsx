@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { useNetworks } from '@/features/networks/hooks';
+import { usePhotoUrls } from '@/features/people/photoHooks';
 
 import type { EventDetail } from '../api';
 import { confirmDeleteEvent } from '../confirmDelete';
@@ -22,12 +23,14 @@ jest.mock('expo-router', () => ({
 jest.mock('../hooks');
 jest.mock('../confirmDelete', () => ({ confirmDeleteEvent: jest.fn() }));
 jest.mock('@/features/networks/hooks');
+jest.mock('@/features/people/photoHooks');
 jest.mock('../dates', () => ({ ...jest.requireActual('../dates'), todayIso: () => '2026-11-06' }));
 
 const mockUseEvent = jest.mocked(useEvent);
 const mockUseDelete = jest.mocked(useDeleteEvent);
 const mockUseNetworks = jest.mocked(useNetworks);
 const mockConfirm = jest.mocked(confirmDeleteEvent);
+const mockUsePhotoUrls = jest.mocked(usePhotoUrls);
 
 const base: EventDetail = {
   id: 'e1',
@@ -46,6 +49,7 @@ const attendee = (id: string, first: string, last: string | null = null) => ({
   last_name: last,
   preferred_name: null,
   photo_path: null,
+  updated_at: '2026-01-01T00:00:00Z',
   is_self: false,
 });
 
@@ -68,6 +72,9 @@ beforeEach(() => {
   mockCanGoBack = true;
   mutateAsync.mockReset().mockResolvedValue(undefined);
   mockConfirm.mockReset();
+  mockUsePhotoUrls.mockReturnValue({ data: undefined } as unknown as ReturnType<
+    typeof usePhotoUrls
+  >);
   mockUseDelete.mockReturnValue({
     mutateAsync,
     isPending: false,
@@ -115,11 +122,16 @@ describe('EventDetailScreen', () => {
     expect(screen.getByLabelText('Network: Family')).toBeOnTheScreen();
   });
 
-  it('with no attendees: empty message, disabled Add people and disabled study', async () => {
+  it('with no attendees: empty message, Add people opens the picker and study is disabled', async () => {
     state(base);
     await render(<EventDetailScreen eventId="e1" />);
     expect(screen.getByText('No one added yet')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Add people' })).toBeDisabled();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add people' }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/event/[id]/attendees',
+      params: { id: 'e1' },
+    });
+    mockPush.mockClear();
     const study = screen.getByRole('button', { name: 'Add people to study' });
     expect(study).toBeDisabled();
     await fireEvent.press(study);
@@ -141,6 +153,28 @@ describe('EventDetailScreen', () => {
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/study/session',
       params: { eventId: 'e1' },
+    });
+  });
+
+  it('offers Edit attendees when people are already going, and shows their photos', async () => {
+    state({
+      ...base,
+      attendeeCount: 1,
+      attendees: [{ ...attendee('p1', 'Emma'), photo_path: 'u/p1.jpg' }],
+    });
+    mockUsePhotoUrls.mockReturnValue({
+      data: { 'u/p1.jpg': 'https://signed.example/p1.jpg' },
+    } as unknown as ReturnType<typeof usePhotoUrls>);
+    await render(<EventDetailScreen eventId="e1" />);
+    expect(mockUsePhotoUrls).toHaveBeenCalledWith(['u/p1.jpg']);
+    expect(
+      screen.getByLabelText('Photo of Emma', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Add people' })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Edit attendees' }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/event/[id]/attendees',
+      params: { id: 'e1' },
     });
   });
 

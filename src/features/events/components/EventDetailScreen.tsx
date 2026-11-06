@@ -7,6 +7,7 @@ import { colors, fontSizes, fontWeights, minTapTarget, radii, spacing } from '@/
 import { resolveNetworkColor } from '@/features/networks/colors';
 import { useNetworks } from '@/features/networks/hooks';
 import { fullName } from '@/features/people/listing';
+import { usePhotoUrls } from '@/features/people/photoHooks';
 
 import type { EventAttendee } from '../api';
 import { confirmDeleteEvent } from '../confirmDelete';
@@ -33,6 +34,7 @@ export function EventDetailScreen({ eventId }: { eventId: string }) {
   const event = useEvent(eventId);
   const { data: networks } = useNetworks();
   const remove = useDeleteEvent();
+  const photoUrls = usePhotoUrls((event.data?.attendees ?? []).map((a) => a.photo_path)).data;
 
   if (event.isPending) return <Message title="Loading…" />;
   if (event.isError) {
@@ -54,6 +56,8 @@ export function EventDetailScreen({ eventId }: { eventId: string }) {
 
   const openPerson = (id: string) => router.push({ pathname: '/person/[id]', params: { id } });
   const study = () => router.push({ pathname: '/study/session', params: { eventId: data.id } });
+  const editAttendees = () =>
+    router.push({ pathname: '/event/[id]/attendees', params: { id: data.id } });
   const edit = () => router.push({ pathname: '/event/[id]/edit', params: { id: data.id } });
   const confirmDelete = async () => {
     if (!(await confirmDeleteEvent(data.name))) return;
@@ -109,14 +113,23 @@ export function EventDetailScreen({ eventId }: { eventId: string }) {
           <Text accessibilityRole="header" style={styles.sectionTitle}>
             {hasAttendees ? `Who's going (${data.attendees.length})` : "Who's going"}
           </Text>
-          {/* Choosing attendees arrives with KT-30. */}
-          <Button label="Add people" variant="secondary" size="sm" disabled />
+          <Button
+            label={hasAttendees ? 'Edit attendees' : 'Add people'}
+            variant="secondary"
+            size="sm"
+            onPress={editAttendees}
+          />
         </View>
 
         {hasAttendees ? (
           <View style={styles.attendees}>
             {data.attendees.map((person) => (
-              <AttendeeRow key={person.id} person={person} onPress={openPerson} />
+              <AttendeeRow
+                key={person.id}
+                person={person}
+                photoUrl={person.photo_path ? (photoUrls?.[person.photo_path] ?? null) : null}
+                onPress={openPerson}
+              />
             ))}
           </View>
         ) : (
@@ -152,9 +165,11 @@ export function EventDetailScreen({ eventId }: { eventId: string }) {
 
 function AttendeeRow({
   person,
+  photoUrl,
   onPress,
 }: {
   person: EventAttendee;
+  photoUrl: string | null;
   onPress: (personId: string) => void;
 }) {
   const name = fullName(person);
@@ -167,7 +182,15 @@ function AttendeeRow({
       style={({ pressed }) => [styles.attendee, pressed && styles.pressed]}
     >
       <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <Avatar firstName={person.first_name} lastName={person.last_name ?? undefined} size="sm" />
+        <Avatar
+          firstName={person.first_name}
+          lastName={person.last_name ?? undefined}
+          photoUrl={photoUrl}
+          photoCacheKey={
+            person.photo_path ? `${person.photo_path}?v=${person.updated_at}` : undefined
+          }
+          size="sm"
+        />
       </View>
       <Text numberOfLines={1} style={styles.attendeeName}>
         {name}

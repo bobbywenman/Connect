@@ -17,6 +17,7 @@ export function createFakePeople() {
     relationships: [],
     networks: [],
     duplicate_dismissals: [],
+    event_persons: [],
   };
   const failures: { table: string; op: Op; error: Error }[] = [];
   let nextId = 1;
