@@ -3,7 +3,14 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { queryKeys } from '@/lib/queryKeys';
 import { useSession } from '@/store/session';
 
-import { createPerson, getPerson, getSelfPerson, updatePerson, type PersonFields } from './api';
+import {
+  createPerson,
+  getPerson,
+  getSelfPerson,
+  listNetworkPeople,
+  updatePerson,
+  type PersonFields,
+} from './api';
 
 export function usePerson(id: string | undefined) {
   return useQuery({
@@ -20,6 +27,15 @@ export function useSelfPerson() {
     queryKey: queryKeys.person.self,
     queryFn: () => getSelfPerson(userId as string),
     enabled: userId !== null,
+  });
+}
+
+/** People in a network (plus Me) and the relationships among them. */
+export function useNetworkPeople(networkId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.persons.list({ networkId }),
+    queryFn: () => listNetworkPeople(networkId as string),
+    enabled: !!networkId,
   });
 }
 

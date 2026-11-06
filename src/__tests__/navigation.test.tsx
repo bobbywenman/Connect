@@ -72,7 +72,6 @@ describe('navigation shell', () => {
       ['tab: study', '/study', 'Study'],
       ['tab: events', '/events', 'Events'],
       ['tab: settings', '/settings', 'Settings'],
-      ['network detail', '/network/7', 'Network 7'],
       ['person detail (deep link path)', '/person/123', 'Person 123'],
       ['relationship new', '/relationship/new', 'New relationship'],
       ['study session', '/study/session', 'Study session'],
@@ -90,6 +89,12 @@ describe('navigation shell', () => {
       // The app shows a blank splash until the stored session has been read.
       await waitFor(() => expect(screen.getAllByText(title).length).toBeGreaterThan(0));
       expect(r.getPathname()).toBe(url);
+    });
+
+    it('network detail: /network/7 renders the people list', async () => {
+      const r = await renderAt('/network/7');
+      await waitFor(() => expect(screen.getByTestId('network-color-bar')).toBeTruthy());
+      expect(r.getPathname()).toBe('/network/7');
     });
 
     it('resolves the knowthem:// deep link to the person route', async () => {

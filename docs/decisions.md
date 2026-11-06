@@ -87,3 +87,9 @@ The tickets stored local notification IDs on the person record. Those IDs only m
 **Decided:** 2026-11-06 by engineering (KT-08)
 
 The Supabase client uses the PKCE flow, so reset emails land on `<redirectTo>?code=...` and the app exchanges the code on the device that asked for the reset. `src/features/auth/recoveryLink.ts` also accepts `token_hash` and implicit-token links. The `(auth)/reset-password` route is exempt from the auth gate's redirects (so a cold-start deep link is not bounced before it is processed), and the session store has a `recovery` flag that pins a recovery session to that screen until the new password is saved. The forgot-password screen always shows the same confirmation so it never reveals which emails have accounts.
+
+## D-12 · People lists narrow relationships on the client (for now)
+
+**Decided:** 2026-11-06 by engineering (KT-16)
+
+`listNetworkPeople` loads the network's people, then all of the user's relationships (RLS-scoped), and keeps only those among the listed people in the app. This avoids long `in (...)` URLs. PostgREST returns at most 1,000 rows per request, so an account with more than ~1,000 relationships needs a SQL view or RPC instead; revisit in the performance pass (KT-42). Counts shown on network cards and the people list exclude "You".

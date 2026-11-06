@@ -10,7 +10,7 @@ type Filter = { column: string; values: unknown[] };
 const OWNER = '00000000-0000-0000-0000-000000000001';
 
 export function createFakePeople() {
-  const tables: Record<string, Row[]> = { persons: [], network_members: [] };
+  const tables: Record<string, Row[]> = { persons: [], network_members: [], relationships: [] };
   const failures: { table: string; op: Op; error: Error }[] = [];
   let nextId = 1;
   const calls: { table: string; op: Op }[] = [];
@@ -21,7 +21,19 @@ export function createFakePeople() {
     if (failure) return { data: null, error: failure.error };
 
     const rows = tables[table]!;
-    const matches = (r: Row) => filters.every((f) => f.values.includes(r[f.column]));
+    const matches = (r: Row) =>
+      filters.every((f) => {
+        // Filter on an embedded table, e.g. `network_members.network_id` with `!inner`.
+        if (f.column.startsWith('network_members.')) {
+          const column = f.column.slice('network_members.'.length);
+          return tables.network_members!.some(
+            (m) => m.person_id === r.id && f.values.includes(m[column]),
+          );
+        }
+        // `.is(column, null)` also matches columns the fake never set.
+        const value = r[f.column] === undefined ? null : r[f.column];
+        return f.values.includes(value);
+      });
 
     if (op === 'insert') {
       const inserted = (Array.isArray(values) ? values : [values]).map((v) => {
@@ -98,6 +110,10 @@ export function createFakePeople() {
         return b;
       },
       eq(column: string, value: unknown) {
+        filters.push({ column, values: [value] });
+        return b;
+      },
+      is(column: string, value: unknown) {
         filters.push({ column, values: [value] });
         return b;
       },

@@ -1,8 +1,24 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { useNetworks } from '@/features/networks/hooks';
+import {
+  NetworkPeopleScreen,
+  StudyHeaderButton,
+} from '@/features/people/components/NetworkPeopleScreen';
 
 export default function NetworkScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return <ScreenPlaceholder title={`Network ${id}`} />;
+  const { data: networks } = useNetworks();
+  const network = networks?.find((n) => n.id === id);
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          title: network?.name ?? 'Network',
+          headerRight: () => <StudyHeaderButton networkId={id} />,
+        }}
+      />
+      <NetworkPeopleScreen networkId={id} networkColor={network?.color} />
+    </>
+  );
 }
