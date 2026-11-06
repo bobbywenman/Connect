@@ -22,8 +22,11 @@ How KnowThem is put together. Update this file when a ticket changes the structu
 ```
 src/
   app/            Routes (Expo Router). Thin: compose feature components, no data logic.
-    (auth)/       Welcome, login, sign-up, forgot/reset password
-    (app)/        Signed-in area: tabs + stacks
+    (auth)/       Welcome (index), login, sign-up, forgot-password
+    (app)/        Signed-in area: Stack over tabs
+      (tabs)/     networks (home), search, study, events, settings
+      network/[id], person/[id] (+ /edit), person/new, relationship/new (modal),
+      study/session, study/complete, event/[id], onboarding
   components/     Design-system components (Button, Avatar, ...). No data fetching.
   features/       One folder per domain: networks, people, relationships, study, events, import, notifications, auth
     <feature>/
@@ -32,7 +35,7 @@ src/
       components/   Feature-specific UI
       *.test.ts     Tests next to the code
   lib/            Supabase client, query client, query keys, shared utilities
-  store/          Zustand stores
+  store/          Client state. Currently a session stub (session.ts) and the pure auth-gate rule (gate.ts); KT-06 replaces the stub
   constants/      Design tokens
   types/          database.ts (generated) and shared types
 supabase/
