@@ -22,7 +22,7 @@ How KnowThem is put together. Update this file when a ticket changes the structu
 ```
 src/
   app/            Routes (Expo Router). Thin: compose feature components, no data logic.
-    (auth)/       Welcome (index), login, sign-up, forgot-password
+    (auth)/       Welcome (index), login, sign-up, forgot-password, reset-password (handles the emailed link; exempt from the gate redirect)
     (app)/        Signed-in area: Stack over tabs
       (tabs)/     networks (home), search, study, events, settings
       network/[id], person/[id] (+ /edit), person/new, relationship/new (modal),

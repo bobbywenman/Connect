@@ -1,7 +1,7 @@
 // Mutations wrapping api.ts. The session store updates itself from auth events.
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { signIn, signOut, signUp } from './api';
+import { requestPasswordReset, signIn, signOut, signUp, updatePassword } from './api';
 
 export function useSignUp() {
   return useMutation({ mutationFn: signUp });
@@ -18,4 +18,15 @@ export function useSignOut() {
     // Drop cached data so the next user never sees the previous user's.
     onSuccess: () => queryClient.clear(),
   });
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: ({ email, redirectTo }: { email: string; redirectTo: string }) =>
+      requestPasswordReset(email, redirectTo),
+  });
+}
+
+export function useUpdatePassword() {
+  return useMutation({ mutationFn: updatePassword });
 }
