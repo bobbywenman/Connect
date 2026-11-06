@@ -99,3 +99,11 @@ The Supabase client uses the PKCE flow, so reset emails land on `<redirectTo>?co
 **Decided:** 2026-11-06 by engineering (KT-15)
 
 A picked photo is cropped square, resized to at most 500x500 and encoded as JPEG (0.8) on the device, then held locally until the person form is saved. After the person row exists, the photo is uploaded to `avatars/{owner_id}/{person_id}.jpg` (upsert) and `photo_path` is set. This avoids orphaned uploads on cancel and works the same for new and existing people. If only the photo step fails, the person is still saved and the user is told to retry. Signed URLs last 1 hour and are cached for 50 minutes; the disk-cache key is `{photo_path}?v={updated_at}` so a replaced photo (same path) refreshes.
+
+## D-14 · Global search runs on the server, recent searches on the device
+
+**Decided:** 2026-11-06 by engineering (KT-27)
+
+Unlike the per-network list (D-12), global search covers every person, tag and note, so it is a SQL function, `search_people(q, max_results)` (security invoker, authenticated only). It matches names (prefix, substring, trigram similarity), tags, job title and notes, ignoring case and accents with `unaccent`, and ranks names above tags above job title above notes. Archived people are excluded; "You" is included. No extra index: `unaccent()` is only STABLE so it cannot back an expression index, and the search is already limited to one owner's rows (about 30 ms for 500 people locally). Revisit with an immutable unaccent wrapper plus trigram indexes if accounts grow into the many thousands. Queries under 2 characters are not sent and typing is debounced by 200 ms.
+
+Recent searches (last 8) are stored on the device only, in the same chunked SecureStore wrapper as the auth session (localStorage on web), under a per-user key.

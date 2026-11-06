@@ -34,6 +34,8 @@ export const queryKeys = {
     /** The signed-in user's self person ("You"). */
     self: ['person', 'self'] as const,
   },
+  /** Global search results for a normalized query. */
+  search: (query: string) => ['search', query] as const,
   /** Signed photo URLs: `['photoUrls', paths]`, plus an optional version suffix. */
   photoUrlsAll: ['photoUrls'] as const,
   photoUrls: (paths: string[]) => ['photoUrls', paths] as const,

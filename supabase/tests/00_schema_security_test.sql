@@ -110,8 +110,8 @@ select is(
        and has_function_privilege('authenticated', p.oid, 'execute')
      order by 1
   ),
-  array['count_people_only_in_network', 'delete_network'],
-  'authenticated can execute only the allowed functions (count_people_only_in_network, delete_network)'
+  array['count_people_only_in_network', 'delete_network', 'search_people'],
+  'authenticated can execute only the allowed functions (count_people_only_in_network, delete_network, search_people)'
 );
 
 select * from finish();

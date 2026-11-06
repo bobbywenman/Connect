@@ -268,6 +268,11 @@ isOneToOne: false
                            },
 "delete_network":
 { Args: { "network_id": string }; Returns: number
+                           },
+"search_people":
+{ Args: { "max_results"?: number,"q": string }; Returns: {
+              "first_name": string,"id": string,"is_self": boolean,"job_title": string,"last_name": string,"match_field": string,"match_snippet": string,"networks": Json,"photo_path": string,"preferred_name": string,"rank": number,"tags": (string)[],"updated_at": string
+            }[]
                            }
           }
           Enums: {
