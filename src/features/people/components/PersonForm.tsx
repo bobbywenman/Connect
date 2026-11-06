@@ -13,6 +13,8 @@ import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Button, Screen, TextField } from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, spacing } from '@/constants';
 import type { NetworkSummary } from '@/features/networks/api';
+import { useReminderPermission } from '@/features/notifications/hooks';
+import { openNotificationSettings } from '@/features/notifications/permissions';
 
 import { confirmDiscard } from '../confirmDiscard';
 import { NO_PHOTO_CHANGE, type PhotoChange } from '../photos';
@@ -163,25 +165,48 @@ export function PersonForm({
     if ((!isDirty && photo.kind === 'unchanged') || (await confirmDiscard())) onCancel();
   };
 
+  // Notification permission is asked the first time a Remind me switch is turned on (KT-36).
+  const birthdayPermission = useReminderPermission();
+  const anniversaryPermission = useReminderPermission();
+
   const reminderRow = (
     name: 'birthdayReminder' | 'anniversaryReminder',
     label: string,
     hasDate: boolean,
+    permission: ReturnType<typeof useReminderPermission>,
   ) => (
     <Controller
       control={control}
       name={name}
       render={({ field }) => (
-        <View style={styles.switchRow}>
-          <Text style={[styles.switchLabel, !hasDate && styles.switchLabelOff]}>Remind me</Text>
-          <Switch
-            accessibilityLabel={label}
-            value={hasDate && field.value}
-            disabled={!hasDate}
-            accessibilityState={{ disabled: !hasDate }}
-            onValueChange={field.onChange}
-          />
-        </View>
+        <>
+          <View style={styles.switchRow}>
+            <Text style={[styles.switchLabel, !hasDate && styles.switchLabelOff]}>Remind me</Text>
+            <Switch
+              accessibilityLabel={label}
+              value={hasDate && field.value}
+              disabled={!hasDate}
+              accessibilityState={{ disabled: !hasDate }}
+              onValueChange={(on) => {
+                field.onChange(on);
+                if (on) void permission.onEnable();
+                else permission.onDisable();
+              }}
+            />
+          </View>
+          {permission.denied && field.value ? (
+            <View style={styles.permissionHint}>
+              <Text style={styles.permissionHintText}>
+                Notifications are off for KnowThem, so this reminder won&apos;t show up.
+              </Text>
+              <Button
+                label="Open Settings"
+                variant="ghost"
+                onPress={() => void openNotificationSettings()}
+              />
+            </View>
+          ) : null}
+        </>
       )}
     />
   );
@@ -276,7 +301,12 @@ export function PersonForm({
               />
             )}
           />
-          {reminderRow('birthdayReminder', 'Remind me about this birthday', !!birthdate)}
+          {reminderRow(
+            'birthdayReminder',
+            'Remind me about this birthday',
+            !!birthdate,
+            birthdayPermission,
+          )}
           <Controller
             control={control}
             name="anniversaryDate"
@@ -296,6 +326,7 @@ export function PersonForm({
             'anniversaryReminder',
             'Remind me about this anniversary',
             !!anniversaryDate,
+            anniversaryPermission,
           )}
         </FormSection>
 
@@ -392,6 +423,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  permissionHint: { alignItems: 'flex-start', gap: spacing.xs },
+  permissionHintText: { fontSize: fontSizes.sm, color: colors.textSecondary },
   switchLabel: { fontSize: fontSizes.base, color: colors.text },
   switchLabelOff: { color: colors.textSecondary },
 });

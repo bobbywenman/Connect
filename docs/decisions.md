@@ -117,3 +117,9 @@ Recent searches (last 8) are stored on the device only, in the same chunked Secu
 - "Remove from <network>" appears only when the detail screen was opened from that network (`?networkId=`). If it is the person's last network, the app warns and offers "Delete <name>" or "Remove anyway". The warning uses "them", since pronouns are free text.
 - The "..." menu and the last-network warning use an in-app `ActionSheet` (the delete confirmation uses `ConfirmDialog`), not `Alert`, which does nothing on web. Switching between modals waits for the first to close on iOS.
 - Relationship wording on the detail screen: badges are from the person's side ("Cousin of Maria", "Your parent" when the other end is You, as in the list); connection rows say what the connection is to this person ("Bob's child", "Your sister" on the self person's page).
+
+## D-16 · Reminders schedule only the next occurrence and re-sync often (KT-36)
+
+**Decided:** 2026-11-06 by engineering
+
+Consistent with D-10 (no change to it): reminders are one-off date-trigger local notifications for the **next** occurrence of each birthday or anniversary, not repeating triggers. iOS allows 64 pending notifications and repeating triggers cannot carry lead days or Feb 29 rules, so the app plans up to 60 soonest reminders and rebuilds the whole schedule on sign-in, every foreground and after any person change. Our notifications are recognised by `data.kind = 'knowthem-reminder'` (and IDs saved per user in device storage), never by IDs in the database. The notification permission prompt appears the first time a Remind me switch is turned on, not at launch; the app stores no permission state. The self person is never reminded.

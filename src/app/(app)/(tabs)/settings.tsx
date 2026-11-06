@@ -5,6 +5,7 @@ import { spacing } from '@/constants';
 import { mapAuthError } from '@/features/auth/errors';
 import { FormError } from '@/features/auth/FormError';
 import { useSignOut } from '@/features/auth/hooks';
+import { DevReminderTest } from '@/features/notifications/components/DevReminderTest';
 import { MyProfileRow } from '@/features/profile/components/MyProfileRow';
 
 export default function SettingsScreen() {
@@ -14,6 +15,11 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <MyProfileRow />
       </View>
+      {__DEV__ ? (
+        <View style={styles.section}>
+          <DevReminderTest />
+        </View>
+      ) : null}
       <View style={styles.actions}>
         {/* Signing out clears the session; the route gate then returns to welcome. */}
         <Button

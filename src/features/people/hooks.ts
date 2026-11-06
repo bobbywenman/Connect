@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from '@/lib/queryKeys';
+import { requestReminderSync } from '@/features/notifications/scheduler';
 import { useSession } from '@/store/session';
 
 import {
@@ -55,6 +56,8 @@ export function useNetworkPeople(networkId: string | undefined, includeArchived 
 
 /** Everything a membership change can make stale: counts, lists, the person. */
 async function invalidatePeople(queryClient: QueryClient, personId: string) {
+  // Dates, reminder flags or archive state may have changed: re-plan device reminders (debounced).
+  requestReminderSync();
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.networks.all }),
     // Prefix match: refreshes the person list of every network.
@@ -109,6 +112,7 @@ export function useDeletePerson(id: string) {
   return useMutation({
     mutationFn: () => deletePerson(id),
     onSuccess: async () => {
+      requestReminderSync();
       // The person is gone: drop their cached page rather than refetching into "not found",
       // and refresh everyone else's (their connections lose this person).
       queryClient.removeQueries({ queryKey: queryKeys.person.detail(id) });

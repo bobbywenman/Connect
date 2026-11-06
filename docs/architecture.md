@@ -34,7 +34,7 @@ src/
       hooks.ts      TanStack Query hooks wrapping api.ts
       components/   Feature-specific UI
       *.test.ts     Tests next to the code
-  lib/            supabase.ts (typed client), secureStorage.ts (chunked session storage), queryClient.ts, queryKeys.ts
+  lib/            supabase.ts (typed client), secureStorage.ts (chunked session storage; `deviceStorage` for small per-device values), queryClient.ts, queryKeys.ts
   store/          Client state. Zustand stores: session.ts (mirrors Supabase auth), uiPrefs.ts, and the pure auth-gate rule (gate.ts)
   constants/      Design tokens
   types/          database.ts (generated) and shared types
@@ -102,6 +102,18 @@ App config comes from `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLI
 - **Events (KT-29):** `src/features/events/` follows the feature pattern. `listEvents` reads `events` with an embedded `event_persons(count)` (one query); `getEvent` embeds the attendees' basic person fields. The Events tab (`EventsHome`) splits the list with the pure `groupEvents(events, today)` (`grouping.ts`; today counts as upcoming), and `dates.ts` holds `formatEventDate` ("Sat, Dec 20") and `formatRelativeDay` ("in 6 days", "3 weeks ago"). Routes: `event/new` and `event/[id]/edit` are modals sharing `EventFormScreen`; `event/[id]` is the detail. The form requires name and date (the column is nullable, so undated rows still list, last under Upcoming). Attendee editing and the study button's session come with KT-30 and KT-22.
 - **Global search (KT-27):** the Search tab renders `features/search/components/SearchScreen`. `searchPeople(query)` calls the `search_people` SQL function (migration `20261106000009`), which returns ranked people with their networks and the matched field; `useSearchPeople` debounces by 200 ms, skips queries under 2 characters and keeps the previous results while loading (`['search', query]`). Recent searches live in a zustand store persisted through `lib/secureStorage` (`features/search/recent.ts`). See D-14.
 - **Tests:** `jest.setup.ts` mocks `@/lib/supabase` with `src/lib/__mocks__/supabase.ts` so unit tests never hit the network; control it with `fakeSupabase` from `@/test-utils/fakeSupabase`.
+
+## Notifications (KT-36)
+
+Birthday and anniversary reminders are local notifications (`expo-notifications`); nothing is pushed from a server. Per D-10 the database only stores whether a reminder is on (`birthday_reminder`, `anniversary_reminder`); no notification IDs or permission state are stored there. Everything lives in `src/features/notifications/`:
+
+- **`plan.ts` (pure, unit-tested):** `planReminders(people, settings, now)` returns the next occurrence of each enabled date as `{ personId, kind, fireAt, title, body }`, sorted by `fireAt` and capped at 60 (iOS keeps 64 pending). It skips archived people and the self person, applies lead days and the local hour, moves Feb 29 to Feb 28 in non-leap years, and moves to next year when this year's fire time has passed. `parseReminderSettings` reads `profiles.settings.reminders` (`birthdays`, `anniversaries`, `leadDays`, `hour`) with defaults (on, on, 0, 9) until KT-37 adds the settings screen.
+- **`scheduler.ts`:** `syncReminders()` reads reminder-enabled people (one query) and the settings, cancels every previously scheduled KnowThem reminder, schedules the plan with date triggers and saves the IDs. Reminders are found by a `data.kind = 'knowthem-reminder'` tag on the notification itself, plus the IDs kept in device storage (`knowthem.reminderIds.<userId>`), so a stale or foreign ID can never be missed. It never asks for permission; without permission it just cancels. Because only the next occurrence is scheduled, it re-runs on sign-in/session restore, every foreground (`AppState`), and after person create/update/archive/restore/delete/remove-from-network (`requestReminderSync()` in the people mutation hooks). Calls are debounced (1.5 s) and serialised so rapid edits don't thrash or double-schedule. Sign-out cancels everything (`requestReminderCancel`).
+- **Permissions (`permissions.ts`):** requested only when a Remind me switch is first turned on and the OS status is undetermined. If denied, the person form shows an inline hint with "Open Settings".
+- **Tapping (`routing.ts`, `hooks.ts`):** notification `data.personId` becomes `/person/<id>`. `useLastNotificationResponse` covers cold start and taps while running; navigation waits for the auth gate (signed in, onboarding done, not in recovery).
+- **Web:** `supportsNotifications` is false, so every function is a no-op.
+- **Foreground:** `setNotificationHandler` shows banners while the app is open.
+- **Dev tool:** a "Test reminder in 1 minute" button on the Settings tab, under `__DEV__` only, schedules an untagged one-off for the first person with a birthday.
 
 ## How we verify work
 

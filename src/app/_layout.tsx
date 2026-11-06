@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
+import { useNotificationNavigation, useReminderSync } from '@/features/notifications/hooks';
 import { queryClient, setupFocusManager } from '@/lib/queryClient';
 import { getGateRedirect } from '@/store/gate';
 import { initSession, useSession } from '@/store/session';
@@ -28,6 +29,8 @@ export default function RootLayout() {
   useEffect(() => initSession(), []);
   useEffect(() => setupFocusManager(), []);
   const status = useAuthGate();
+  useReminderSync();
+  useNotificationNavigation();
 
   return (
     <QueryClientProvider client={queryClient}>
