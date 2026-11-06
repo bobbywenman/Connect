@@ -68,9 +68,9 @@ The developer has a Mac with Xcode and an iPhone. Their local folder is `/Users/
 ### One-time backend setup (hosted project `mpbmcgyknbpriwhanait`)
 
 1. `.env` needs `EXPO_PUBLIC_SUPABASE_URL=https://mpbmcgyknbpriwhanait.supabase.co` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...` (see `.env.example`).
-2. **The hosted database has no schema yet.** Database password: the user doesn't know it. Dashboard → Project Settings → Database → Reset database password. Then:
-   - `npx supabase link --project-ref mpbmcgyknbpriwhanait` (asks for the password)
-   - `npx supabase db push` (applies all migrations in `supabase/migrations/`; the seed/demo user is local-only and is NOT pushed)
+2. **Done 2026-11-06.** The repo is linked and migrations `…000001`–`…000009` are applied to the hosted project (named "Roots" in the dashboard). Its old prototype schema was wiped first with `db reset --remote --no-seed`. An empty leftover `person-photos` storage bucket from the prototype remains; the app only uses `avatars`. To apply new migrations later:
+   - `npx supabase db push --remote` (Supabase CLI 3.x targets the **local** stack unless you pass `--remote`; the CLI uses your logged-in account, no database password needed)
+   - Never run `db reset --remote` again now that real data may exist. The seed/demo user is local-only.
 3. Dashboard → Authentication → URL Configuration → add redirect URL `knowthem://**`.
 4. For easy testing: Authentication → Providers → Email → turn **Confirm email** off (turn it back on before launch, KT-44).
 5. The demo login (`demo@knowthem.app` / `password123`) and the "Use demo account (dev)" button only work against **local** Supabase. On the hosted project, sign up with a real email.
