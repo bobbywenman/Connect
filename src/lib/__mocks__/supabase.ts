@@ -12,6 +12,12 @@ const fake = {
   session: null as Session | null,
   profile: { onboarding_complete: true } as { onboarding_complete: boolean } | null,
   profileError: null as Error | null,
+  /** Returned as `error` by the next auth call (signUp / signInWithPassword / signOut). */
+  authError: null as unknown,
+  /** When true, signUp returns no session (email confirmation required). */
+  requireConfirmation: false,
+  /** When true, signUp pretends the email is already registered (confirmations-on behaviour). */
+  obfuscatedDuplicate: false,
 };
 
 function makeSession(): Session {
@@ -37,12 +43,33 @@ const auth = {
       data: { subscription: { unsubscribe: () => fake.listeners.delete(listener) } },
     };
   }),
-  signInWithPassword: jest.fn(async () => {
+  signInWithPassword: jest.fn(async (_credentials: { email: string; password: string }) => {
+    if (fake.authError) return { data: { session: null, user: null }, error: fake.authError };
     const session = makeSession();
     emit('SIGNED_IN', session);
     return { data: { session, user: session.user }, error: null };
   }),
+  signUp: jest.fn(
+    async (_args: {
+      email: string;
+      password: string;
+      options?: { data?: Record<string, unknown> };
+    }) => {
+      if (fake.authError) return { data: { session: null, user: null }, error: fake.authError };
+      if (fake.obfuscatedDuplicate) {
+        const user = { ...makeSession().user, identities: [] };
+        return { data: { session: null, user }, error: null };
+      }
+      const session = makeSession();
+      if (fake.requireConfirmation) {
+        return { data: { session: null, user: session.user }, error: null };
+      }
+      emit('SIGNED_IN', session);
+      return { data: { session, user: session.user }, error: null };
+    },
+  ),
   signOut: jest.fn(async () => {
+    if (fake.authError) return { error: fake.authError };
     emit('SIGNED_OUT', null);
     return { error: null };
   }),
@@ -137,8 +164,12 @@ export const fakeSupabase = {
     customTypes.rows = [];
     customTypes.error = null;
     customTypes.nextId = 1;
+    fake.authError = null;
+    fake.requireConfirmation = false;
+    fake.obfuscatedDuplicate = false;
     auth.onAuthStateChange.mockClear();
     auth.signInWithPassword.mockClear();
+    auth.signUp.mockClear();
     auth.signOut.mockClear();
     from.mockClear();
   },
@@ -167,6 +198,21 @@ export const fakeSupabase = {
   },
   setCustomRelationshipTypesError(error: Error | null) {
     customTypes.error = error;
+  },
+  signInCalls() {
+    return auth.signInWithPassword.mock.calls.map(([credentials]) => credentials);
+  },
+  signUpCalls() {
+    return auth.signUp.mock.calls.map(([args]) => args);
+  },
+  setAuthError(error: unknown) {
+    fake.authError = error;
+  },
+  setRequireConfirmation(value: boolean) {
+    fake.requireConfirmation = value;
+  },
+  setObfuscatedDuplicate(value: boolean) {
+    fake.obfuscatedDuplicate = value;
   },
   /** Pretend a stored session exists, so INITIAL_SESSION delivers it. */
   setStoredSession(signedIn: boolean) {

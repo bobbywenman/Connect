@@ -55,7 +55,7 @@ To let Claude push migrations or run against the hosted project, add the needed 
 
 ## Auth providers (filled in as tickets land)
 
-- **Email** (KT-07): Authentication → Providers → Email. Decide on "Confirm email" (on for production).
+- **Email** (KT-07): Authentication → Providers → Email. Locally, `supabase/config.toml` sets `[auth.email] enable_confirmations = false` so sign-up signs the user in immediately. **Production should turn "Confirm email" on** (tracked in KT-44); the app already handles it by showing "Check your email to confirm" after sign-up.
 - **Redirect URLs** (KT-08, KT-09): add `knowthem://**` under Authentication → URL Configuration. Locally, `supabase/config.toml` already allows `knowthem://**` and `http://localhost:8081` (Expo web).
 - **Google** (KT-09): Google Cloud OAuth client IDs (iOS + web) → Authentication → Providers → Google.
 - **Apple** (KT-10): Apple Developer Services ID + key → Authentication → Providers → Apple.
