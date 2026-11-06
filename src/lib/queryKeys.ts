@@ -9,6 +9,8 @@
  *   ['persons', { networkId }]         people list, filtered
  *   ['person', id]                     one person
  *   ['person', 'self']                 the signed-in user's self person ("You")
+ *   ['events']                         list of events
+ *   ['events', id]                     one event with its attendees
  *   ['customRelationshipTypes']        the user's custom relationship labels
  *
  * Always build keys with this module so they stay consistent.
@@ -22,6 +24,10 @@ export const queryKeys = {
   },
   persons: {
     list: (filter: { networkId?: string } = {}) => ['persons', filter] as const,
+  },
+  events: {
+    all: ['events'] as const,
+    detail: (id: string) => ['events', id] as const,
   },
   person: {
     detail: (id: string) => ['person', id] as const,

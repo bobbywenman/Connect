@@ -1,5 +1,5 @@
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { EventsHome } from '@/features/events/components/EventsHome';
 
 export default function EventsScreen() {
-  return <ScreenPlaceholder title="Events" />;
+  return <EventsHome />;
 }
