@@ -61,8 +61,8 @@ begin
    where id = v_self;
 
   insert into public.networks (id, owner_id, name, type, color, description) values
-    (v_family, v_user, 'Wenman Family', 'family', '#E07A5F', 'Both sides of the family'),
-    (v_work, v_user, 'Work', 'work', '#3D5A80', 'Brightline engineering');
+    (v_family, v_user, 'Wenman Family', 'family', 'orange', 'Both sides of the family'),
+    (v_work, v_user, 'Work', 'work', 'blue', 'Brightline engineering');
 
   insert into public.persons (
     id, owner_id, first_name, last_name, preferred_name, pronouns, birthdate,

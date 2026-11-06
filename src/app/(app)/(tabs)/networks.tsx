@@ -1,5 +1,5 @@
-import { ScreenPlaceholder } from '@/features/navigation/ScreenPlaceholder';
+import { NetworksHome } from '@/features/networks/components/NetworksHome';
 
 export default function NetworksScreen() {
-  return <ScreenPlaceholder title="Networks" />;
+  return <NetworksHome />;
 }

@@ -4,6 +4,7 @@ export default function AppLayout() {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="network/new" options={{ title: 'New network' }} />
       <Stack.Screen name="network/[id]" options={{ title: 'Network' }} />
       <Stack.Screen name="person/[id]/index" options={{ title: 'Person' }} />
       <Stack.Screen name="person/[id]/edit" options={{ title: 'Edit person' }} />
