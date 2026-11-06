@@ -39,6 +39,7 @@ npx supabase db push
 3. Never put the service role key or the database password in the repo or the app.
 
 ### For Claude cloud sessions
+
 To let Claude push migrations or run against the hosted project, add the needed values as secrets in the cloud environment settings rather than pasting them in chat. Claude will ask when a ticket needs it.
 
 ## Auth providers (filled in as tickets land)

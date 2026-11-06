@@ -4,18 +4,18 @@ How KnowThem is put together. Update this file when a ticket changes the structu
 
 ## Stack
 
-| Layer | Choice |
-|---|---|
-| App | React Native + Expo (latest stable SDK), TypeScript strict |
-| Routing | Expo Router (file-based; built on React Navigation) |
-| Server state | TanStack Query |
-| Client state | Zustand (session, study deck, UI prefs) |
-| Forms | react-hook-form + zod |
-| Backend | Supabase: Postgres, Auth, Storage, Edge Functions |
-| Device APIs | expo-image-picker, expo-contacts, expo-notifications, expo-secure-store, expo-apple-authentication, expo-location |
-| UI | Own design system (`src/components`), FlashList, expo-image, Reanimated, Gesture Handler, react-native-svg |
-| Tests | Jest + React Native Testing Library; pgTAP for the database |
-| Builds | EAS Build / Submit |
+| Layer        | Choice                                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| App          | React Native + Expo (latest stable SDK), TypeScript strict                                                        |
+| Routing      | Expo Router (file-based; built on React Navigation)                                                               |
+| Server state | TanStack Query                                                                                                    |
+| Client state | Zustand (session, study deck, UI prefs)                                                                           |
+| Forms        | react-hook-form + zod                                                                                             |
+| Backend      | Supabase: Postgres, Auth, Storage, Edge Functions                                                                 |
+| Device APIs  | expo-image-picker, expo-contacts, expo-notifications, expo-secure-store, expo-apple-authentication, expo-location |
+| UI           | Own design system (`src/components`), FlashList, expo-image, Reanimated, Gesture Handler, react-native-svg        |
+| Tests        | Jest + React Native Testing Library; pgTAP for the database                                                       |
+| Builds       | EAS Build / Submit                                                                                                |
 
 ## Folder layout
 
@@ -67,6 +67,7 @@ duplicate_dismissals owner_id, person_a_id, person_b_id
 ```
 
 Key rules:
+
 - **Many-to-many people ↔ networks** (D-1). Network person counts come from `network_members`.
 - **One row per relationship** (D-7). To find someone's connections, query `source_person_id = X OR target_person_id = X`. Read `type` when X is the source and `inverse_type` when X is the target.
 - **Self person** (D-2) is created by a trigger when an auth user is created, along with the profile row.
@@ -75,10 +76,10 @@ Key rules:
 
 ## Environments
 
-| Environment | Supabase | Used for |
-|---|---|---|
-| Local | `npx supabase start` (Docker) | Development, tests, CI |
-| Hosted | Project `mpbmcgyknbpriwhanait` | Device testing, TestFlight, production (a separate production project may be created before launch) |
+| Environment | Supabase                       | Used for                                                                                            |
+| ----------- | ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Local       | `npx supabase start` (Docker)  | Development, tests, CI                                                                              |
+| Hosted      | Project `mpbmcgyknbpriwhanait` | Device testing, TestFlight, production (a separate production project may be created before launch) |
 
 App config comes from `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env` (never committed). The anon key is safe to ship in the app. The **service role key must never** be in the app or the repo.
 
