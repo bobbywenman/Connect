@@ -44,6 +44,7 @@
     "@expo/metro-runtime": "~58.0.17",
     "@expo/vector-icons": "^15.0.2",
     "@hookform/resolvers": "^7.0.3",
+    "@react-native-community/datetimepicker": "9.2.1",
     "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.106.1",
     "expo": "~58.0.23",
