@@ -1,5 +1,7 @@
 # KnowThem
 
+[![CI](https://github.com/bobbywenman/Connect/actions/workflows/ci.yml/badge.svg)](https://github.com/bobbywenman/Connect/actions/workflows/ci.yml)
+
 Remember the people in your life. KnowThem lets you map your networks (family, friends, coworkers), connect people with relationships, and study them with flashcards before the wedding, reunion or first day at a new job.
 
 **Status:** milestone M0 (Foundation) in progress. See [the roadmap](docs/roadmap.md).
