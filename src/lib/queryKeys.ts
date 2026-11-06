@@ -21,10 +21,12 @@ export const queryKeys = {
     detail: (id: string) => ['networks', id] as const,
   },
   persons: {
-    list: (filter: { networkId?: string } = {}) => ['persons', filter] as const,
+    list: (filter: { networkId?: string; includeArchived?: boolean } = {}) => ['persons', filter] as const,
   },
   person: {
     detail: (id: string) => ['person', id] as const,
+    /** The detail screen's person + networks + connections; under `detail`, so it refreshes with it. */
+    full: (id: string) => ['person', id, 'full'] as const,
     /** The signed-in user's self person ("You"). */
     self: ['person', 'self'] as const,
   },

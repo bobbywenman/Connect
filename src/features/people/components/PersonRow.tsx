@@ -2,9 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Avatar } from '@/components';
+import { Avatar, Badge } from '@/components';
 import { colors, fontSizes, fontWeights, spacing } from '@/constants';
 
+import { photoCacheKey } from '../detail';
 import { fullName, type NetworkPerson } from '../listing';
 
 export interface PersonRowProps {
@@ -12,23 +13,36 @@ export interface PersonRowProps {
   /** Second line (see `primaryLabel`); ignored for the self person, who shows "You". */
   label: string | null;
   onPress: (personId: string) => void;
+  /** Signed URL of the person's photo (see `usePhotoUrls`), if loaded. */
+  photoUrl?: string | null;
 }
 
 /** One row of the people list. Memoised: the list re-renders on every keystroke of search. */
-export const PersonRow = memo(function PersonRow({ person, label, onPress }: PersonRowProps) {
+export const PersonRow = memo(function PersonRow({
+  person,
+  label,
+  onPress,
+  photoUrl,
+}: PersonRowProps) {
   const name = fullName(person);
+  const archived = !!person.archived_at;
   const subtitle = person.is_self ? 'You' : label;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={subtitle ? `${name}, ${subtitle}` : name}
+      accessibilityLabel={[name, subtitle, archived ? 'Archived' : null].filter(Boolean).join(', ')}
       accessibilityHint="Opens the profile"
       onPress={() => onPress(person.id)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed, archived && styles.archived]}
     >
       {/* The row's own label already says the name; keep the avatar out of the a11y tree. */}
       <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <Avatar firstName={person.first_name} lastName={person.last_name ?? undefined} />
+        <Avatar
+          firstName={person.first_name}
+          lastName={person.last_name ?? undefined}
+          photoUrl={photoUrl}
+          photoCacheKey={photoCacheKey(person)}
+        />
       </View>
       <View style={styles.text}>
         <Text numberOfLines={1} style={styles.name}>
@@ -40,6 +54,7 @@ export const PersonRow = memo(function PersonRow({ person, label, onPress }: Per
           </Text>
         ) : null}
       </View>
+      {archived ? <Badge label="Archived" color={colors.textSecondary} /> : null}
       <Ionicons
         name="chevron-forward"
         size={20}
@@ -63,6 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   pressed: { backgroundColor: colors.surface },
+  archived: { opacity: 0.6 },
   text: { flex: 1, gap: spacing.xxs },
   name: { fontSize: fontSizes.base, fontWeight: fontWeights.medium, color: colors.text },
   label: { fontSize: fontSizes.sm, color: colors.textSecondary },
