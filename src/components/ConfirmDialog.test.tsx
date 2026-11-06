@@ -28,3 +28,19 @@ describe('ConfirmDialog', () => {
     expect(base.onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ConfirmDialog neutral action', () => {
+  it('renders a third button only when label and handler are given', async () => {
+    const onNeutral = jest.fn();
+    await render(<ConfirmDialog {...base} visible neutralLabel="Review" onNeutral={onNeutral} />);
+    await fireEvent.press(screen.getByRole('button', { name: 'Review' }));
+    expect(onNeutral).toHaveBeenCalledTimes(1);
+    expect(base.onCancel).not.toHaveBeenCalled();
+    expect(base.onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('has no third button by default', async () => {
+    await render(<ConfirmDialog {...base} visible />);
+    expect(screen.queryByRole('button', { name: 'Review' })).toBeNull();
+  });
+});

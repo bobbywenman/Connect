@@ -11,6 +11,8 @@
  *   ['person', 'self']                 the signed-in user's self person ("You")
  *   ['events']                         list of events
  *   ['events', id]                     one event with its attendees
+ *   ['persons', 'duplicateCheck']      everyone, for duplicate detection (refreshed with any ['persons'] invalidation)
+ *   ['duplicates', 'dismissals']       "not duplicates" decisions
  *   ['customRelationshipTypes']        the user's custom relationship labels
  *
  * Always build keys with this module so they stay consistent.
@@ -29,6 +31,10 @@ export const queryKeys = {
   events: {
     all: ['events'] as const,
     detail: (id: string) => ['events', id] as const,
+  },
+  duplicates: {
+    people: ['persons', 'duplicateCheck'] as const,
+    dismissals: ['duplicates', 'dismissals'] as const,
   },
   person: {
     detail: (id: string) => ['person', id] as const,

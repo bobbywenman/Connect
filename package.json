@@ -11,7 +11,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "web": "expo start --web",
-    "lint": "expo lint --max-warnings 0",
+    "lint": "expo lint --max-warnings 0 --no-cache",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",

@@ -3,4 +3,4 @@
 jest.mock('@/lib/supabase');
 
 // FlashList measures layout natively; this fixes a 400x900 viewport so rows render in tests.
-require('@shopify/flash-list/jestSetup');
+import '@shopify/flash-list/jestSetup';
