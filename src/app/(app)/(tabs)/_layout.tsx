@@ -20,6 +20,8 @@ export default function TabsLayout() {
           name={tab.name}
           options={{
             title: tab.title,
+            // The Networks home draws its own "Your networks" heading.
+            headerShown: tab.name !== 'networks',
             tabBarAccessibilityLabel: `${tab.title} tab`,
             tabBarIcon: ({ color, size }) => (
               <Ionicons

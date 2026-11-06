@@ -246,7 +246,21 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "networks_with_counts": {
+                  Row: {
+                    "color": string | null,"created_at": string,"description": string | null,"id": string,"name": string,"person_count": number | null,"type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "color"?: string | null,"created_at"?: string | null,"description"?: string | null,"id"?: string | null,"name"?: string | null,"person_count"?: never,"type"?: string | null
+                         }
+                        Update: {
+                           "color"?: string | null,"created_at"?: string | null,"description"?: string | null,"id"?: string | null,"name"?: string | null,"person_count"?: never,"type"?: string | null
+                         }
+                        Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
             "delete_network":
