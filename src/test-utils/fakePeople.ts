@@ -10,7 +10,12 @@ type Filter = { column: string; values: unknown[] };
 const OWNER = '00000000-0000-0000-0000-000000000001';
 
 export function createFakePeople() {
-  const tables: Record<string, Row[]> = { persons: [], network_members: [], relationships: [] };
+  const tables: Record<string, Row[]> = {
+    persons: [],
+    network_members: [],
+    relationships: [],
+    event_persons: [],
+  };
   const failures: { table: string; op: Op; error: Error }[] = [];
   let nextId = 1;
   const calls: { table: string; op: Op }[] = [];
