@@ -143,6 +143,36 @@ describe('NetworkPeopleScreen', () => {
     });
   });
 
+  describe('add relationship from the list', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('long-press opens a menu that starts the relationship flow for that person', async () => {
+      state({ data });
+      await render(<NetworkPeopleScreen networkId="n1" />);
+      await fireEvent(screen.getByLabelText('Ann Adams, Coworker of Zoe'), 'longPress');
+      await fireEvent.press(screen.getByRole('button', { name: 'Add relationship' }));
+      await act(async () => {
+        jest.runAllTimers();
+      });
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/relationship/new',
+        params: { personId: 'ann' },
+      });
+    });
+
+    it('offers the same menu as a screen reader action', async () => {
+      state({ data });
+      await render(<NetworkPeopleScreen networkId="n1" />);
+      const row = screen.getByLabelText('Ann Adams, Coworker of Zoe');
+      expect(row.props.accessibilityActions).toEqual([
+        { name: 'longpress', label: 'Add relationship' },
+      ]);
+      await fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'longpress' } });
+      expect(screen.getByRole('button', { name: 'Add relationship' })).toBeTruthy();
+    });
+  });
+
   it('asks for archived people only when Show archived is on, and marks them', async () => {
     const withArchived: NetworkPeople = {
       ...data,

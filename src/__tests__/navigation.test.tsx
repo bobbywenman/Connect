@@ -78,7 +78,7 @@ describe('navigation shell', () => {
       ['tab: events', '/events', 'Events'],
       ['tab: settings', '/settings', 'Settings'],
       ['person detail (deep link path)', '/person/123', 'Person not found'],
-      ['relationship new', '/relationship/new', 'New relationship'],
+      ['relationship new (no person)', '/relationship/new', 'Pick a person first'],
       ['study session', '/study/session', 'Study session'],
       ['study complete', '/study/complete', 'Study complete'],
       ['event detail', '/event/9', 'Loading…'],
