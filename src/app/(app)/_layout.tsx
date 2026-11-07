@@ -14,6 +14,10 @@ export default function AppLayout() {
         name="relationship/new"
         options={{ title: 'New relationship', presentation: 'modal' }}
       />
+      <Stack.Screen
+        name="relationship/[id]/edit"
+        options={{ title: 'Change relationship', presentation: 'modal' }}
+      />
       <Stack.Screen name="study/session" options={{ title: 'Study session' }} />
       <Stack.Screen name="study/complete" options={{ title: 'Study complete' }} />
       <Stack.Screen name="event/[id]/index" options={{ title: 'Event' }} />

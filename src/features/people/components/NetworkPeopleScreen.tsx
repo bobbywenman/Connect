@@ -2,9 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { Button, Chip, EmptyState } from '@/components';
+import { ActionSheet, Button, Chip, EmptyState } from '@/components';
 import { colors, fontSizes, fontWeights, minTapTarget, radii, spacing } from '@/constants';
 import { resolveNetworkColor } from '@/features/networks/colors';
 import {
@@ -19,6 +19,7 @@ import {
   collectRelationshipTypes,
   collectTags,
   filterPeople,
+  fullName,
   hasActiveFilters,
   primaryLabel,
   sortPeople,
@@ -56,6 +57,8 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
   const [types, setTypes] = useState<RelationshipTypeId[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pulling, setPulling] = useState(false);
+  /** Person whose row menu is open (long-press). */
+  const [menuFor, setMenuFor] = useState<NetworkPerson | null>(null);
 
   // Everything below depends only on the fetched data, so typing never redoes it.
   const prepared = useMemo(() => {
@@ -91,6 +94,20 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
     [router, networkId],
   );
   const addPerson = () => router.push({ pathname: '/person/new', params: { networkId } });
+  const openMenu = useCallback(
+    (id: string) => setMenuFor(data?.people.find((p) => p.id === id) ?? null),
+    [data],
+  );
+  const addRelationship = () => {
+    const personId = menuFor?.id;
+    setMenuFor(null);
+    if (!personId) return;
+    // iOS cannot present the flow's modal while the menu is still dismissing.
+    setTimeout(
+      () => router.push({ pathname: '/relationship/new', params: { personId } }),
+      Platform.OS === 'ios' ? 400 : 0,
+    );
+  };
   const clearAll = () => {
     setQuery('');
     setTags([]);
@@ -112,10 +129,11 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
         person={item}
         label={prepared?.labels.get(item.id) ?? null}
         onPress={openPerson}
+        onLongPress={openMenu}
         photoUrl={item.photo_path ? (photoUrls?.[item.photo_path] ?? null) : null}
       />
     ),
-    [prepared, openPerson, photoUrls],
+    [prepared, openPerson, openMenu, photoUrls],
   );
 
   // Counts leave out You, so they agree with the network card ("8 people").
@@ -251,6 +269,12 @@ export function NetworkPeopleScreen({ networkId, networkColor }: NetworkPeopleSc
       >
         <Ionicons name="add" size={28} color={colors.textOnPrimary} />
       </Pressable>
+      <ActionSheet
+        visible={menuFor !== null}
+        onClose={() => setMenuFor(null)}
+        title={menuFor ? fullName(menuFor) : undefined}
+        actions={[{ label: 'Add relationship', onPress: addRelationship }]}
+      />
     </View>
   );
 }

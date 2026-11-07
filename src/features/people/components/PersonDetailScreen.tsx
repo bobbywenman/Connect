@@ -19,14 +19,7 @@ import { displayName } from '@/features/relationships';
 
 import type { DetailNetwork, PersonConnection, PersonDetail } from '../api';
 import { daysUntilNext, formatCalendarDate, formatDaysUntil } from '../dates';
-import {
-  connectionLabel,
-  nameParts,
-  photoCacheKey,
-  relationshipBadges,
-  sortConnections,
-  textOrNull,
-} from '../detail';
+import { connectionLabel, nameParts, photoCacheKey, sortConnections, textOrNull } from '../detail';
 import {
   useArchivePerson,
   useDeletePerson,
@@ -36,6 +29,7 @@ import {
 } from '../hooks';
 import { usePhotoUrl, usePhotoUrls } from '../photoHooks';
 import { canDeletePerson } from '../rules';
+import { RelationshipBadges } from './RelationshipBadges';
 
 export interface PersonDetailScreenProps {
   personId: string;
@@ -172,7 +166,6 @@ function Loaded({
   }
 
   const { name, nickname } = nameParts(person);
-  const badges = relationshipBadges(person, connections);
   const info = infoRows(person, today);
   const sections = [
     { title: 'Notes', text: textOrNull(person.notes) },
@@ -262,18 +255,7 @@ function Loaded({
           ) : null}
         </View>
 
-        {badges.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.badges}
-            style={styles.badgesScroll}
-          >
-            {badges.map((b) => (
-              <Badge key={b.id} label={b.label} color={colors.accent} />
-            ))}
-          </ScrollView>
-        ) : null}
+        <RelationshipBadges person={person} connections={connections} />
 
         {info.length > 0 ? (
           <Section title="Details">
@@ -548,8 +530,6 @@ const styles = StyleSheet.create({
   },
   networkDot: { width: 10, height: 10, borderRadius: 5 },
   networkChipText: { fontSize: fontSizes.sm, color: colors.text },
-  badgesScroll: { flexGrow: 0, marginHorizontal: -spacing.base },
-  badges: { gap: spacing.sm, paddingHorizontal: spacing.base },
   section: { gap: spacing.sm },
   sectionTitle: {
     fontSize: fontSizes.sm,

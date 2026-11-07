@@ -13,6 +13,8 @@ export interface PersonRowProps {
   /** Second line (see `primaryLabel`); ignored for the self person, who shows "You". */
   label: string | null;
   onPress: (personId: string) => void;
+  /** Opens the row's action menu (long-press, or the screen reader's action). */
+  onLongPress?: (personId: string) => void;
   /** Signed URL of the person's photo (see `usePhotoUrls`), if loaded. */
   photoUrl?: string | null;
 }
@@ -22,6 +24,7 @@ export const PersonRow = memo(function PersonRow({
   person,
   label,
   onPress,
+  onLongPress,
   photoUrl,
 }: PersonRowProps) {
   const name = fullName(person);
@@ -33,6 +36,13 @@ export const PersonRow = memo(function PersonRow({
       accessibilityLabel={[name, subtitle, archived ? 'Archived' : null].filter(Boolean).join(', ')}
       accessibilityHint="Opens the profile"
       onPress={() => onPress(person.id)}
+      onLongPress={onLongPress ? () => onLongPress(person.id) : undefined}
+      accessibilityActions={
+        onLongPress ? [{ name: 'longpress', label: 'Add relationship' }] : undefined
+      }
+      onAccessibilityAction={(e) => {
+        if (e.nativeEvent.actionName === 'longpress') onLongPress?.(person.id);
+      }}
       style={({ pressed }) => [styles.row, pressed && styles.pressed, archived && styles.archived]}
     >
       {/* The row's own label already says the name; keep the avatar out of the a11y tree. */}
