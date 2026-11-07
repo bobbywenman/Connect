@@ -10,6 +10,16 @@ import { useApplyPhotoChange, usePhotoUrl } from '../photoHooks';
 import type { PhotoChange } from '../photos';
 import type { PersonFormValues } from '../schemas';
 import { PersonForm } from './PersonForm';
+import { useDuplicateCheck } from './useDuplicateCheck';
+
+/** The form values that matter for duplicate detection. */
+const toCandidate = (v: PersonFormValues, id?: string) => ({
+  id,
+  first_name: v.firstName,
+  last_name: v.lastName,
+  preferred_name: v.preferredName,
+  networkIds: v.networkIds,
+});
 
 type Props = {
   onSaved: (personId: string) => void;
@@ -47,6 +57,7 @@ function CreateScreen({ networkId, onSaved, onCancel }: Extract<Props, { mode: '
   const networks = useNetworks();
   const create = useCreatePerson();
   const applyPhoto = useApplyPhotoChange();
+  const duplicates = useDuplicateCheck();
 
   if (networks.isPending) return <Message title="Loading…" />;
   if (networks.isError) {
@@ -61,6 +72,7 @@ function CreateScreen({ networkId, onSaved, onCancel }: Extract<Props, { mode: '
 
   const submit = async (values: PersonFormValues, photo: PhotoChange) => {
     const { networkIds, ...fields } = values;
+    if (!(await duplicates.confirmSave(toCandidate(values)))) return;
     try {
       const person = await create.mutateAsync({ fields, networkIds });
       if (photo.kind !== 'unchanged') {
@@ -73,15 +85,18 @@ function CreateScreen({ networkId, onSaved, onCancel }: Extract<Props, { mode: '
   };
 
   return (
-    <PersonForm
-      title="New person"
-      initialValues={newPersonFormInput(defaultNetworkIds(networks.data, networkId))}
-      networks={networks.data}
-      isSaving={create.isPending || applyPhoto.isPending}
-      submitError={create.isError ? "Couldn't save. Check your connection and try again." : null}
-      onSubmit={submit}
-      onCancel={onCancel}
-    />
+    <>
+      <PersonForm
+        title="New person"
+        initialValues={newPersonFormInput(defaultNetworkIds(networks.data, networkId))}
+        networks={networks.data}
+        isSaving={create.isPending || applyPhoto.isPending}
+        submitError={create.isError ? "Couldn't save. Check your connection and try again." : null}
+        onSubmit={submit}
+        onCancel={onCancel}
+      />
+      {duplicates.dialog}
+    </>
   );
 }
 
@@ -90,6 +105,7 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
   const person = usePerson(personId);
   const update = useUpdatePerson(personId);
   const applyPhoto = useApplyPhotoChange();
+  const duplicates = useDuplicateCheck();
   const photoPath = person.data?.photo_path;
   const photoVersion = person.data?.updated_at;
   const photoUrl = usePhotoUrl(photoPath, photoVersion);
@@ -112,6 +128,12 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
   const isSelf = person.data.is_self;
   const submit = async (values: PersonFormValues, photo: PhotoChange) => {
     const { networkIds, ...fields } = values;
+    if (
+      !isSelf &&
+      !(await duplicates.confirmSave(toCandidate(values, personId), person.data ?? undefined))
+    ) {
+      return;
+    }
     try {
       const saved = await update.mutateAsync({
         fields,
@@ -132,19 +154,22 @@ function EditScreen({ personId, onSaved, onCancel }: Extract<Props, { mode: 'edi
   };
 
   return (
-    <PersonForm
-      title={isSelf ? 'My profile' : 'Edit person'}
-      initialValues={personToFormInput(person.data)}
-      networks={networks.data}
-      isSelf={isSelf}
-      isSaving={update.isPending || applyPhoto.isPending}
-      photoUrl={photoUrl}
-      photoCacheKey={photoPath ? `${photoPath}?v=${photoVersion}` : undefined}
-      hasPhoto={!!photoPath}
-      submitError={update.isError ? "Couldn't save. Check your connection and try again." : null}
-      onSubmit={submit}
-      onCancel={onCancel}
-    />
+    <>
+      <PersonForm
+        title={isSelf ? 'My profile' : 'Edit person'}
+        initialValues={personToFormInput(person.data)}
+        networks={networks.data}
+        isSelf={isSelf}
+        isSaving={update.isPending || applyPhoto.isPending}
+        photoUrl={photoUrl}
+        photoCacheKey={photoPath ? `${photoPath}?v=${photoVersion}` : undefined}
+        hasPhoto={!!photoPath}
+        submitError={update.isError ? "Couldn't save. Check your connection and try again." : null}
+        onSubmit={submit}
+        onCancel={onCancel}
+      />
+      {duplicates.dialog}
+    </>
   );
 }
 

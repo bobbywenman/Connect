@@ -28,6 +28,7 @@
       "expo-font",
       "expo-asset",
       "expo-secure-store",
+      "expo-notifications",
       "@react-native-community/datetimepicker",
       "expo-image",
       [

@@ -1,5 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import * as Notifications from 'expo-notifications';
+import { Linking } from 'react-native';
+
 import type { NetworkSummary } from '@/features/networks/api';
 
 import { confirmDiscard } from '../confirmDiscard';
@@ -158,6 +161,60 @@ describe('PersonForm', () => {
     await setup();
     await fireEvent.press(screen.getByRole('button', { name: 'Personal' }));
     expect(screen.getByLabelText('Remind me about this birthday')).toBeDisabled();
+  });
+
+  describe('reminder permission', () => {
+    const notifications = jest.mocked(Notifications);
+    const flip = async () => {
+      await setup({ values: { birthdate: '1990-04-23' } });
+      await fireEvent(screen.getByLabelText('Remind me about this birthday'), 'valueChange', true);
+    };
+
+    beforeEach(() => {
+      notifications.getPermissionsAsync.mockClear();
+      notifications.requestPermissionsAsync.mockClear();
+    });
+
+    it('does not ask for permission when the form opens', async () => {
+      await setup({ values: { birthdate: '1990-04-23' } });
+      expect(notifications.getPermissionsAsync).not.toHaveBeenCalled();
+      expect(notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('asks when the switch is first turned on and permission is undetermined', async () => {
+      notifications.getPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        status: 'undetermined',
+        canAskAgain: true,
+      } as never);
+      notifications.requestPermissionsAsync.mockResolvedValueOnce({
+        granted: true,
+        status: 'granted',
+        canAskAgain: true,
+      } as never);
+      await flip();
+      await waitFor(() => expect(notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1));
+      expect(screen.queryByText('Open Settings')).toBeNull();
+    });
+
+    it('does not prompt again when already granted', async () => {
+      await flip();
+      await waitFor(() => expect(notifications.getPermissionsAsync).toHaveBeenCalled());
+      expect(notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('shows an Open Settings hint when permission is denied', async () => {
+      notifications.getPermissionsAsync.mockResolvedValueOnce({
+        granted: false,
+        status: 'denied',
+        canAskAgain: false,
+      } as never);
+      const openSettings = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
+      await flip();
+      await fireEvent.press(await screen.findByRole('button', { name: 'Open Settings' }));
+      expect(notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+      expect(openSettings).toHaveBeenCalled();
+    });
   });
 
   it('cancels straight away when nothing changed', async () => {

@@ -91,3 +91,6 @@ const webBackend: AsyncKeyValueStorage = {
 /** Session storage for Supabase auth: chunked SecureStore on native, localStorage on web. */
 export const sessionStorage: AsyncKeyValueStorage =
   Platform.OS === 'web' ? webBackend : createChunkedStorage(secureStoreBackend);
+
+/** Small per-device values (e.g. scheduled reminder IDs, D-10); same backend as the session. */
+export const deviceStorage: AsyncKeyValueStorage = sessionStorage;

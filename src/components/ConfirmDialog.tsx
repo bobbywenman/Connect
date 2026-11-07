@@ -13,6 +13,9 @@ export interface ConfirmDialogProps {
   /** Style the confirm button as destructive. */
   destructive?: boolean;
   isLoading?: boolean;
+  /** Optional third action shown above the two main buttons (e.g. "Review"). Needs `onNeutral`. */
+  neutralLabel?: string;
+  onNeutral?: () => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -29,6 +32,8 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   destructive = false,
   isLoading = false,
+  neutralLabel,
+  onNeutral,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -53,6 +58,14 @@ export function ConfirmDialog({
             {title}
           </Text>
           <Text style={styles.message}>{message}</Text>
+          {neutralLabel && onNeutral ? (
+            <Button
+              label={neutralLabel}
+              variant="secondary"
+              onPress={onNeutral}
+              disabled={isLoading}
+            />
+          ) : null}
           <View style={styles.actions}>
             <Button
               label={cancelLabel}

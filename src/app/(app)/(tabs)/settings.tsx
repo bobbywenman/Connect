@@ -5,6 +5,9 @@ import { spacing } from '@/constants';
 import { mapAuthError } from '@/features/auth/errors';
 import { FormError } from '@/features/auth/FormError';
 import { useSignOut } from '@/features/auth/hooks';
+import { DuplicatesRow } from '@/features/people/components/DuplicatesRow';
+import { DevReminderTest } from '@/features/notifications/components/DevReminderTest';
+import { NotificationsRow } from '@/features/notifications/components/NotificationsRow';
 import { MyProfileRow } from '@/features/profile/components/MyProfileRow';
 
 export default function SettingsScreen() {
@@ -14,6 +17,17 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <MyProfileRow />
       </View>
+      <View style={styles.section}>
+        <DuplicatesRow />
+      </View>
+      <View style={styles.section}>
+        <NotificationsRow />
+      </View>
+      {__DEV__ ? (
+        <View style={styles.section}>
+          <DevReminderTest />
+        </View>
+      ) : null}
       <View style={styles.actions}>
         {/* Signing out clears the session; the route gate then returns to welcome. */}
         <Button

@@ -25,7 +25,14 @@ export default function AppLayout() {
         name="event/[id]/edit"
         options={{ title: 'Edit event', presentation: 'modal' }}
       />
+      <Stack.Screen
+        name="event/[id]/attendees"
+        options={{ title: 'Who is going', presentation: 'modal' }}
+      />
       <Stack.Screen name="event/new" options={{ title: 'New event', presentation: 'modal' }} />
+      <Stack.Screen name="settings/duplicates" options={{ title: 'Possible duplicates' }} />
+      <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
+      <Stack.Screen name="merge" options={{ title: 'Merge people' }} />
       <Stack.Screen name="onboarding" options={{ title: 'Welcome', headerShown: false }} />
     </Stack>
   );

@@ -4,6 +4,7 @@ KnowThem is a React Native (Expo) app that helps people remember the people in t
 
 ## Read first
 
+- `docs/handoff.md`: current status, what is left, and learnings (start here when picking up the work).
 - `AGENTS.md`: Expo's own guidance. Expo changes every SDK; check versioned docs for SDK 58 rather than memory.
 
 - `docs/decisions.md`: decisions that **override** the original requirements. Check it before relying on `docs/requirements/`.
